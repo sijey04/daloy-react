@@ -1,13 +1,60 @@
-# React + TypeScript + Vite
+# Demand-Driven Traffic Light Optimization System
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+An AI-powered solution designed to revolutionize urban traffic management by replacing costly proprietary systems like SCATS.
 
-Currently, two official plugins are available:
+## Overview
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+This system leverages computer vision and machine learning to analyze traffic patterns in real-time and optimize traffic signal timings accordingly. By using affordable, open-source technologies, we provide an accessible alternative to expensive proprietary traffic management systems while delivering superior performance.
 
-## Expanding the ESLint configuration
+## Key Features
+
+- **Real-time Vehicle Detection**: Uses OpenCV and YOLO (You Only Look Once) for accurate, low-latency vehicle detection
+- **Dynamic Intersection Monitoring**: Employs two 360-degree rotating cameras to provide comprehensive coverage of intersections
+- **Adaptive Signal Control**: Automatically adjusts traffic light timings based on current traffic volume and patterns
+- **Cost-Effective Hardware**: Minimizes infrastructure costs while maximizing efficacy
+- **User-Friendly Dashboard**: Modern React-based interface for traffic monitoring and system management
+
+## Technical Architecture
+
+- **Frontend**: React + TypeScript + Vite for a responsive, high-performance user interface
+- **Computer Vision**: OpenCV and YOLO for vehicle detection and classification
+- **Analytics**: Real-time and historical traffic pattern analysis
+- **Hardware**: Optimized for standard cameras and computing hardware
+
+## Benefits
+
+- **Reduced Congestion**: Intelligent signal timing reduces vehicle wait times
+- **Lower Emissions**: Less idling time means reduced vehicle emissions
+- **Improved Urban Mobility**: More efficient traffic flow for all road users
+- **Cost Savings**: Significant reduction in implementation costs compared to proprietary systems
+- **Scalability**: Easily deployable across multiple intersections
+
+## Development
+
+This project uses React with TypeScript and Vite. Below are instructions for developers working on the system.
+
+### Setup
+
+1. Clone the repository
+2. Install dependencies: `npm install`
+3. Start the development server: `npm run dev`
+
+### Available Scripts
+
+- `npm run dev` - Starts the development server
+- `npm run build` - Builds the app for production
+- `npm run lint` - Runs the linter
+- `npm run preview` - Previews the built app locally
+
+## License
+
+[MIT License](LICENSE)
+
+---
+
+## For Developers
+
+### Expanding the ESLint configuration
 
 If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
 
@@ -30,25 +77,4 @@ export default tseslint.config({
   },
 })
 ```
-
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default tseslint.config({
-  plugins: {
-    // Add the react-x and react-dom plugins
-    'react-x': reactX,
-    'react-dom': reactDom,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended typescript rules
-    ...reactX.configs['recommended-typescript'].rules,
-    ...reactDom.configs.recommended.rules,
-  },
-})
 ```
