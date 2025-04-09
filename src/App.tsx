@@ -5,6 +5,7 @@ import CssBaseline from '@mui/material/CssBaseline';
 import './App.css';
 import LoginPage from './components/LoginPage';
 import Dashboard from './components/Dashboard';
+import CameraDetail from './components/CameraDetail';
 
 // Create a theme instance
 const theme = createTheme({
@@ -85,6 +86,8 @@ const theme = createTheme({
         html: {
           height: '100%',
           width: '100%',
+          margin: 0,
+          padding: 0,
         },
         body: {
           height: '100%',
@@ -97,6 +100,8 @@ const theme = createTheme({
           height: '100%',
           width: '100%',
           display: 'flex',
+          flexDirection: 'column',
+          maxWidth: '100%'
         },
       },
     },
@@ -120,6 +125,20 @@ const theme = createTheme({
         root: {
           boxShadow: '0 1px 4px rgba(0, 0, 0, 0.08)',
         },
+      },
+    },
+    MuiGrid: {
+      styleOverrides: {
+        root: {
+          width: '100%',
+          margin: 0,
+          padding: '12px',
+        },
+        container: {
+          width: '100%',
+          margin: 0,
+          padding: 0,
+        }
       },
     },
   },
@@ -156,6 +175,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <Dashboard />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/camera/:id" 
+            element={
+              <ProtectedRoute>
+                <CameraDetail />
               </ProtectedRoute>
             } 
           />

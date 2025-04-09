@@ -7,13 +7,27 @@ html, body {
   font-family: 'Poppins', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  overflow: hidden;
+  overflow-x: hidden;
 }
 
 #root {
   height: 100%;
   width: 100%;
   display: flex;
+  flex-direction: column;
+  max-width: 100vw;
+}
+
+/* Make sure all flex containers respect full width */
+.MuiBox-root, .MuiGrid-root {
+  max-width: 100%;
+}
+
+/* Remove any horizontal overflow that might create scrollbars */
+.MuiContainer-root {
+  max-width: 100% !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
 }
 
 /* Custom scrollbar styles */

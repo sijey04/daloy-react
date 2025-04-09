@@ -200,16 +200,80 @@ const Dashboard: React.FC = () => {
     </Box>
   );
 
-  // Sample data for CCTV cameras
-  const cctvCameras = [
-    { id: 1, name: 'North Gate', location: 'Main Entrance', status: 'Online' },
-    { id: 2, name: 'South Gate', location: 'Back Entrance', status: 'Online' },
-    { id: 3, name: 'East Junction', location: 'Highway Intersection', status: 'Online' },
-    { id: 4, name: 'West Junction', location: 'City Center Crossing', status: 'Offline' },
-    { id: 5, name: 'Central Plaza', location: 'Downtown Area', status: 'Online' },
-    { id: 6, name: 'Highway 101', location: 'North Section', status: 'Online' },
-    { id: 7, name: 'Main Street', location: 'Shopping District', status: 'Maintenance' },
-    { id: 8, name: 'Industrial Park', location: 'Factory Zone', status: 'Online' },
+  // Sample data for intersections
+  const intersectionData = [
+    { 
+      id: 1, 
+      name: 'North Gate Junction', 
+      location: 'Main Entrance Intersection', 
+      status: 'Online',
+      trafficLevel: 'Low',
+      vehicleCount: 42,
+      lastUpdated: '2 min ago'
+    },
+    { 
+      id: 2, 
+      name: 'South Gate Crossing', 
+      location: 'Back Entrance Intersection', 
+      status: 'Online',
+      trafficLevel: 'Medium',
+      vehicleCount: 87,
+      lastUpdated: '5 min ago'
+    },
+    { 
+      id: 3, 
+      name: 'East Highway Junction', 
+      location: 'Highway 101 Intersection', 
+      status: 'Online',
+      trafficLevel: 'High',
+      vehicleCount: 153,
+      lastUpdated: 'Just now'
+    },
+    { 
+      id: 4, 
+      name: 'West City Center', 
+      location: 'Downtown Crossing', 
+      status: 'Offline',
+      trafficLevel: 'Low',
+      vehicleCount: 0,
+      lastUpdated: '1 hr ago'
+    },
+    { 
+      id: 5, 
+      name: 'Central Plaza', 
+      location: 'Downtown Area', 
+      status: 'Online',
+      trafficLevel: 'Medium',
+      vehicleCount: 76,
+      lastUpdated: '3 min ago'
+    },
+    { 
+      id: 6, 
+      name: 'Highway 101 North', 
+      location: 'North Section', 
+      status: 'Online',
+      trafficLevel: 'Low',
+      vehicleCount: 31,
+      lastUpdated: '1 min ago'
+    },
+    { 
+      id: 7, 
+      name: 'Main Street Shopping', 
+      location: 'Shopping District', 
+      status: 'Maintenance',
+      trafficLevel: 'High',
+      vehicleCount: 125,
+      lastUpdated: '10 min ago'
+    },
+    { 
+      id: 8, 
+      name: 'Industrial Complex', 
+      location: 'Factory Zone', 
+      status: 'Online',
+      trafficLevel: 'Medium',
+      vehicleCount: 68,
+      lastUpdated: '7 min ago'
+    },
   ];
 
   return (
@@ -255,9 +319,9 @@ const Dashboard: React.FC = () => {
           }}
         >
           <Box sx={{ display: 'flex', flexWrap: 'wrap', mx: -1.5 }}>
-            {cctvCameras.map(camera => (
+            {intersectionData.map(intersection => (
               <Box 
-                key={camera.id} 
+                key={intersection.id} 
                 sx={{ 
                   width: { 
                     xs: '100%', 
@@ -268,7 +332,7 @@ const Dashboard: React.FC = () => {
                   p: 1.5 
                 }}
               >
-                <CCTVCard camera={camera} />
+                <CCTVCard intersection={intersection} />
               </Box>
             ))}
           </Box>
