@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Drawer,
   Box,
@@ -35,6 +36,8 @@ const Sidebar: React.FC<SidebarProps> = ({ drawerWidth, mobileOpen, handleDrawer
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [isCollapsed, setIsCollapsed] = useState(true);
+  const navigate = useNavigate();
+  const location = useLocation();
   
   const toggleCollapse = () => {
     const newState = !isCollapsed;
@@ -52,12 +55,16 @@ const Sidebar: React.FC<SidebarProps> = ({ drawerWidth, mobileOpen, handleDrawer
 
   const collapsedWidth = 72; // Width when collapsed (just enough for icons)
 
+  const handleLogout = () => {
+    // Clear authentication state
+    localStorage.removeItem('isAuthenticated');
+    // Navigate to login page
+    navigate('/login');
+  };
+
   const menuItems = [
-    { text: 'Dashboard', icon: <DashboardIcon />, active: true },
-    { text: 'CCTV Feeds', icon: <VideoLibraryIcon /> },
-    { text: 'Analytics', icon: <BarChartIcon /> },
-    { text: 'Traffic Management', icon: <TrafficIcon /> },
-    { text: 'Settings', icon: <SettingsIcon /> },
+    { text: 'Dashboard', icon: <DashboardIcon />, path: '/' },
+    { text: 'Settings', icon: <SettingsIcon />, path: '/settings' },
   ];
 
   const drawer = (
@@ -77,7 +84,7 @@ const Sidebar: React.FC<SidebarProps> = ({ drawerWidth, mobileOpen, handleDrawer
         }}>
           {!isCollapsed && (
             <Typography variant="h6" component="div" sx={{ fontWeight: 700, color: '#333' }}>
-              TrafficMonitor
+              Daloy! 
             </Typography>
           )}
           {isCollapsed ? (
@@ -131,27 +138,30 @@ const Sidebar: React.FC<SidebarProps> = ({ drawerWidth, mobileOpen, handleDrawer
         }}>
           <List>
             {menuItems.map((item) => (
-              <ListItem key={item.text} disablePadding>
+              <ListItem key={item.text} disablePadding sx={{ mb: 0.5 }}>
                 <Tooltip title={isCollapsed ? item.text : ""} placement="right">
                   <ListItemButton
+                    onClick={() => navigate(item.path)}
                     sx={{
-                      py: 1.5,
+                      py: 1.2,
                       px: isCollapsed ? 1 : 2,
-                      minHeight: 48,
+                      minHeight: 40,
                       justifyContent: isCollapsed ? 'center' : 'flex-start',
-                      backgroundColor: item.active ? 'rgba(103, 174, 110, 0.1)' : 'transparent',
-                      borderLeft: item.active ? '4px solid #67AE6E' : '4px solid transparent',
+                      backgroundColor: location.pathname === item.path ? 'rgba(103, 174, 110, 0.1)' : 'transparent',
+                      borderLeft: location.pathname === item.path ? '4px solid #67AE6E' : '4px solid transparent',
                       '&:hover': {
-                        backgroundColor: item.active ? 'rgba(103, 174, 110, 0.15)' : 'rgba(0, 0, 0, 0.04)',
+                        backgroundColor: location.pathname === item.path ? 'rgba(103, 174, 110, 0.15)' : 'rgba(0, 0, 0, 0.04)',
                       },
+                      borderRadius: '0 8px 8px 0'
                     }}
                   >
                     <ListItemIcon
                       sx={{
-                        minWidth: isCollapsed ? 0 : 45,
-                        mr: isCollapsed ? 0 : 2,
+                        minWidth: isCollapsed ? 0 : 36,
+                        mr: isCollapsed ? 0 : 1.5,
                         justifyContent: 'center',
-                        color: item.active ? '#67AE6E' : 'inherit',
+                        color: location.pathname === item.path ? '#67AE6E' : 'inherit',
+                        fontSize: '1.25rem'
                       }}
                     >
                       {item.icon}
@@ -161,8 +171,9 @@ const Sidebar: React.FC<SidebarProps> = ({ drawerWidth, mobileOpen, handleDrawer
                         primary={item.text} 
                         sx={{ 
                           '& .MuiListItemText-primary': {
-                            fontWeight: item.active ? 600 : 400,
-                            color: item.active ? '#67AE6E' : 'inherit',
+                            fontWeight: location.pathname === item.path ? 600 : 400,
+                            color: location.pathname === item.path ? '#67AE6E' : 'inherit',
+                            fontSize: '0.9rem'
                           }
                         }}
                       />
@@ -175,23 +186,45 @@ const Sidebar: React.FC<SidebarProps> = ({ drawerWidth, mobileOpen, handleDrawer
         </Box>
         <Divider sx={{ opacity: 0.3 }} />
         <List>
-          <ListItem disablePadding>
+          <ListItem disablePadding sx={{ mb: 0.5 }}>
             <Tooltip title={isCollapsed ? "Help & Support" : ""} placement="right">
-              <ListItemButton sx={{ py: 1.5, px: isCollapsed ? 1 : 2, justifyContent: isCollapsed ? 'center' : 'flex-start' }}>
-                <ListItemIcon sx={{ minWidth: isCollapsed ? 0 : 45, mr: isCollapsed ? 0 : 2, justifyContent: 'center' }}>
+              <ListItemButton sx={{ 
+                py: 1.2, 
+                px: isCollapsed ? 1 : 2, 
+                justifyContent: isCollapsed ? 'center' : 'flex-start',
+                minHeight: 40,
+                borderRadius: '0 8px 8px 0'
+              }}>
+                <ListItemIcon sx={{ 
+                  minWidth: isCollapsed ? 0 : 36, 
+                  mr: isCollapsed ? 0 : 1.5, 
+                  justifyContent: 'center' 
+                }}>
                   <HelpOutlineIcon />
                 </ListItemIcon>
-                {!isCollapsed && <ListItemText primary="Help & Support" />}
+                {!isCollapsed && <ListItemText primary="Help & Support" sx={{ '& .MuiListItemText-primary': { fontSize: '0.9rem' } }} />}
               </ListItemButton>
             </Tooltip>
           </ListItem>
           <ListItem disablePadding>
             <Tooltip title={isCollapsed ? "Logout" : ""} placement="right">
-              <ListItemButton sx={{ py: 1.5, px: isCollapsed ? 1 : 2, justifyContent: isCollapsed ? 'center' : 'flex-start' }}>
-                <ListItemIcon sx={{ minWidth: isCollapsed ? 0 : 45, mr: isCollapsed ? 0 : 2, justifyContent: 'center' }}>
+              <ListItemButton 
+                onClick={handleLogout}
+                sx={{ 
+                py: 1.2, 
+                px: isCollapsed ? 1 : 2, 
+                justifyContent: isCollapsed ? 'center' : 'flex-start',
+                minHeight: 40,
+                borderRadius: '0 8px 8px 0'
+              }}>
+                <ListItemIcon sx={{ 
+                  minWidth: isCollapsed ? 0 : 36, 
+                  mr: isCollapsed ? 0 : 1.5, 
+                  justifyContent: 'center' 
+                }}>
                   <LogoutIcon />
                 </ListItemIcon>
-                {!isCollapsed && <ListItemText primary="Logout" />}
+                {!isCollapsed && <ListItemText primary="Logout" sx={{ '& .MuiListItemText-primary': { fontSize: '0.9rem' } }} />}
               </ListItemButton>
             </Tooltip>
           </ListItem>
