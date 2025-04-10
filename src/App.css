@@ -8,6 +8,7 @@ html, body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
+  box-sizing: border-box;
 }
 
 #root {
@@ -16,11 +17,31 @@ html, body {
   display: flex;
   flex-direction: column;
   max-width: 100vw;
+  overflow-x: hidden;
 }
 
-/* Make sure all flex containers respect full width */
-.MuiBox-root, .MuiGrid-root {
+/* Fix Grid and Box layout issues */
+.MuiBox-root {
   max-width: 100%;
+  box-sizing: border-box;
+}
+
+.MuiGrid-root {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.MuiGrid-item {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Fix for nested grids */
+.MuiGrid-container .MuiGrid-container {
+  margin: 0;
+  width: 100%;
+  padding: 0;
 }
 
 /* Remove any horizontal overflow that might create scrollbars */
