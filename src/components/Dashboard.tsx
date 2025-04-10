@@ -209,7 +209,8 @@ const Dashboard: React.FC = () => {
       status: 'Online',
       trafficLevel: 'Low',
       vehicleCount: 42,
-      lastUpdated: '2 min ago'
+      lastUpdated: '2 min ago',
+      imageUrl: '/images/camere1.png'
     },
     { 
       id: 2, 
@@ -218,7 +219,8 @@ const Dashboard: React.FC = () => {
       status: 'Online',
       trafficLevel: 'Medium',
       vehicleCount: 87,
-      lastUpdated: '5 min ago'
+      lastUpdated: '5 min ago',
+      imageUrl: '/images/camera3.jpg'
     },
     { 
       id: 3, 
@@ -227,53 +229,9 @@ const Dashboard: React.FC = () => {
       status: 'Online',
       trafficLevel: 'High',
       vehicleCount: 153,
-      lastUpdated: 'Just now'
-    },
-    { 
-      id: 4, 
-      name: 'West City Center', 
-      location: 'Downtown Crossing', 
-      status: 'Offline',
-      trafficLevel: 'Low',
-      vehicleCount: 0,
-      lastUpdated: '1 hr ago'
-    },
-    { 
-      id: 5, 
-      name: 'Central Plaza', 
-      location: 'Downtown Area', 
-      status: 'Online',
-      trafficLevel: 'Medium',
-      vehicleCount: 76,
-      lastUpdated: '3 min ago'
-    },
-    { 
-      id: 6, 
-      name: 'Highway 101 North', 
-      location: 'North Section', 
-      status: 'Online',
-      trafficLevel: 'Low',
-      vehicleCount: 31,
-      lastUpdated: '1 min ago'
-    },
-    { 
-      id: 7, 
-      name: 'Main Street Shopping', 
-      location: 'Shopping District', 
-      status: 'Maintenance',
-      trafficLevel: 'High',
-      vehicleCount: 125,
-      lastUpdated: '10 min ago'
-    },
-    { 
-      id: 8, 
-      name: 'Industrial Complex', 
-      location: 'Factory Zone', 
-      status: 'Online',
-      trafficLevel: 'Medium',
-      vehicleCount: 68,
-      lastUpdated: '7 min ago'
-    },
+      lastUpdated: 'Just now',
+      imageUrl: '/images/camera4.jpg'
+    }
   ];
 
   return (
