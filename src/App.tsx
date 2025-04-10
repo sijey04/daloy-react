@@ -6,6 +6,7 @@ import './App.css';
 import LoginPage from './components/LoginPage';
 import Dashboard from './components/Dashboard';
 import CameraDetail from './components/CameraDetail';
+import Settings from './components/Settings';
 
 // Create a theme instance
 const theme = createTheme({
@@ -132,12 +133,15 @@ const theme = createTheme({
         root: {
           width: '100%',
           margin: 0,
-          padding: '12px',
+          boxSizing: 'border-box'
         },
         container: {
           width: '100%',
           margin: 0,
           padding: 0,
+          boxSizing: 'border-box',
+          display: 'flex',
+          flexWrap: 'wrap'
         }
       },
     },
@@ -183,6 +187,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <CameraDetail />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/settings" 
+            element={
+              <ProtectedRoute>
+                <Settings />
               </ProtectedRoute>
             } 
           />
