@@ -24,6 +24,7 @@ interface IntersectionProps {
   trafficLevel: string;
   vehicleCount: number;
   lastUpdated: string;
+  imageUrl?: string;
 }
 
 interface CCTVCardProps {
@@ -86,54 +87,87 @@ const CCTVCard: React.FC<CCTVCardProps> = ({ intersection }) => {
         }
       }}
     >
+      <Box sx={{ position: 'absolute', top: 0, right: 0, zIndex: 1 }}>
+        <IconButton 
+          size="small" 
+          sx={{ color: '#888', m: 1 }}
+          onClick={handleMoreClick}
+        >
+          <MoreVertIcon fontSize="small" />
+        </IconButton>
+      </Box>
+
       <CardActionArea onClick={handleCardClick} sx={{ height: '100%' }}>
         <Box sx={{ position: 'relative' }}>
-          <Box
-            sx={{
-              height: 180,
-              backgroundColor: '#222',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              backgroundImage: 'repeating-linear-gradient(45deg, #333 0, #333 5px, #2a2a2a 5px, #2a2a2a 10px)',
-              position: 'relative',
-              '&::after': {
-                content: '""',
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                backgroundImage: 'radial-gradient(circle, rgba(0,0,0,0) 50%, rgba(0,0,0,0.5) 100%)',
-              }
-            }}
-          >
-            <Box sx={{
-              width: 60,
-              height: 60,
-              borderRadius: '50%',
-              backgroundColor: 'rgba(255,255,255,0.05)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              position: 'relative',
-              zIndex: 1
-            }}>
-              <TrafficIcon sx={{ fontSize: 28, color: '#aaa' }} />
-            </Box>
+          {intersection.imageUrl ? (
             <Box
               sx={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
+                height: 180,
                 width: '100%',
-                height: '100%',
-                opacity: 0.03,
-                backgroundSize: '3px 3px',
-                backgroundImage: 'linear-gradient(to right, #fff 1px, transparent 1px), linear-gradient(to bottom, #fff 1px, transparent 1px)'
+                backgroundColor: '#222',
+                position: 'relative',
+                backgroundImage: `url(${intersection.imageUrl})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                '&::after': {
+                  content: '""',
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  backgroundColor: 'rgba(0,0,0,0.1)'
+                }
               }}
             />
-          </Box>
+          ) : (
+            <Box
+              sx={{
+                height: 180,
+                backgroundColor: '#222',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundImage: 'repeating-linear-gradient(45deg, #333 0, #333 5px, #2a2a2a 5px, #2a2a2a 10px)',
+                position: 'relative',
+                '&::after': {
+                  content: '""',
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  backgroundImage: 'radial-gradient(circle, rgba(0,0,0,0) 50%, rgba(0,0,0,0.5) 100%)',
+                }
+              }}
+            >
+              <Box sx={{
+                width: 60,
+                height: 60,
+                borderRadius: '50%',
+                backgroundColor: 'rgba(255,255,255,0.05)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                position: 'relative',
+                zIndex: 1
+              }}>
+                <TrafficIcon sx={{ fontSize: 28, color: '#aaa' }} />
+              </Box>
+              <Box
+                sx={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  height: '100%',
+                  opacity: 0.03,
+                  backgroundSize: '3px 3px',
+                  backgroundImage: 'linear-gradient(to right, #fff 1px, transparent 1px), linear-gradient(to bottom, #fff 1px, transparent 1px)'
+                }}
+              />
+            </Box>
+          )}
 
           <Chip
             label={intersection.name}
@@ -173,13 +207,6 @@ const CCTVCard: React.FC<CCTVCardProps> = ({ intersection }) => {
             <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
               {intersection.name}
             </Typography>
-            <IconButton 
-              size="small" 
-              sx={{ color: '#888' }}
-              onClick={handleMoreClick}
-            >
-              <MoreVertIcon fontSize="small" />
-            </IconButton>
           </Box>
 
           <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
