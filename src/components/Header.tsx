@@ -59,7 +59,7 @@ const Header: React.FC<HeaderProps> = ({
           <MenuIcon />
         </IconButton>
         <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1, fontWeight: 600 }}>
-          Traffic Light Optimization System
+          Daloy: Traffic Optimization System
         </Typography>
         
         <IconButton sx={{ mx: 1 }}>
