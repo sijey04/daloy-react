@@ -122,9 +122,9 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
             mb: 1,
             lineHeight: 1.1,
           }}>
-            Hello 
+            Welcome to 
             <br />
-            TrafficOpt!
+            Daloy!
             <Box component="span" sx={{ 
               display: 'inline-block', 
               ml: 1,
@@ -135,20 +135,12 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
             </Box>
           </Typography>
           
-          <Typography sx={{ 
-            mt: 3, 
-            maxWidth: '500px',
-            fontSize: '1rem',
-            lineHeight: 1.6
-          }}>
-            Skip repetitive and manual traffic management tasks. Get highly productive through automation
-            and save tons of time!
-          </Typography>
+          
         </Box>
         
         {/* Copyright */}
         <Typography variant="body2" sx={{ opacity: 0.7, pt: 2 }}>
-          © {new Date().getFullYear()} TrafficOpt. All rights reserved.
+          © {new Date().getFullYear()} Daloy. All rights reserved.
         </Typography>
       </Box>
       
@@ -173,7 +165,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
               fontWeight: 600,
               color: '#333'
             }}>
-              TrafficOpt
+              Daloy
             </Typography>
           </Box>
           
@@ -184,7 +176,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
             mb: 1,
             color: '#333'
           }}>
-            Welcome Back!
+            Login to your account
           </Typography>
           
           <Box sx={{ mb: 5 }}>
@@ -200,9 +192,9 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                   '&:hover': { textDecoration: 'underline' }
                 }}
               >
-                Create a new account now
+                Contact us
               </Link>
-              , it's FREE! Takes less than a minute.
+              
             </Typography>
           </Box>
           
@@ -329,29 +321,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
               Login Now
             </Button>
             
-            {/* Google Login Button */}
-            <Button
-              fullWidth
-              variant="outlined"
-              startIcon={<GoogleIcon />}
-              sx={{ 
-                py: 1.5,
-                mb: 4,
-                color: '#555',
-                borderColor: '#e0e0e0',
-                borderRadius: 2,
-                textTransform: 'none',
-                fontWeight: 500,
-                '&:hover': {
-                  borderColor: '#67AE6E',
-                  bgcolor: 'rgba(103, 174, 110, 0.05)',
-                },
-              }}
-              aria-label="Login with Google"
-            >
-              Login with Google
-            </Button>
-            
+           
             {/* Forgot Password */}
             <Box sx={{ textAlign: 'center' }}>
               <Typography variant="body2" color="text.secondary" display="inline">
