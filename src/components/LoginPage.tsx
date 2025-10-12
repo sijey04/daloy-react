@@ -6,11 +6,9 @@ import {
   Typography, 
   Link,
   IconButton,
-  Stack,
   TextField,
   InputAdornment
 } from '@mui/material';
-import GoogleIcon from '@mui/icons-material/Google';
 import TrafficIcon from '@mui/icons-material/Traffic';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
@@ -131,7 +129,6 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
               transform: 'rotate(10deg)',
               fontSize: '3rem' 
             }}>
-              👋
             </Box>
           </Typography>
           

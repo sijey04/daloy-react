@@ -27,7 +27,6 @@ import SaveIcon from '@mui/icons-material/Save';
 import TuneIcon from '@mui/icons-material/Tune';
 import CameraAltIcon from '@mui/icons-material/CameraAlt';
 import StorageIcon from '@mui/icons-material/Storage';
-import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import NotificationsIcon from '@mui/icons-material/Notifications';
 
 // Constants for sidebar dimensions
@@ -87,7 +86,7 @@ const Settings: React.FC = () => {
     autoUpdate: true
   });
 
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
   };
 
@@ -221,7 +220,7 @@ const Settings: React.FC = () => {
                         <Typography gutterBottom>Detection Threshold</Typography>
                         <Slider
                           value={algorithmSettings.detectionThreshold}
-                          onChange={(e, value) => setAlgorithmSettings({...algorithmSettings, detectionThreshold: value as number})}
+                          onChange={(_e, value) => setAlgorithmSettings({...algorithmSettings, detectionThreshold: value as number})}
                           min={0.1}
                           max={1}
                           step={0.05}
@@ -238,7 +237,7 @@ const Settings: React.FC = () => {
                         <Typography gutterBottom>Tracker Sensitivity</Typography>
                         <Slider
                           value={algorithmSettings.trackerSensitivity}
-                          onChange={(e, value) => setAlgorithmSettings({...algorithmSettings, trackerSensitivity: value as number})}
+                          onChange={(_e, value) => setAlgorithmSettings({...algorithmSettings, trackerSensitivity: value as number})}
                           min={0.1}
                           max={1}
                           step={0.05}

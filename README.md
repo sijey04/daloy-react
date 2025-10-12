@@ -1,25 +1,60 @@
-# Demand-Driven Traffic Light Optimization System
+# 🚦 Demand-Driven Traffic Light Optimization System
 
-An AI-powered solution designed to revolutionize urban traffic management by replacing costly proprietary systems like SCATS.
+An AI-powered solution with **real-time Arduino integration** designed to revolutionize urban traffic management by replacing costly proprietary systems like SCATS.
 
-## Overview
+## 🌟 Overview
 
 This system leverages computer vision and machine learning to analyze traffic patterns in real-time and optimize traffic signal timings accordingly. By using affordable, open-source technologies, we provide an accessible alternative to expensive proprietary traffic management systems while delivering superior performance.
 
-## Key Features
+**NEW: Real-time Arduino integration with live monitoring, WebSocket synchronization, and instant manual control!**
 
-- **Real-time Vehicle Detection**: Uses OpenCV and YOLO (You Only Look Once) for accurate, low-latency vehicle detection
-- **Dynamic Intersection Monitoring**: Employs two 360-degree rotating cameras to provide comprehensive coverage of intersections
-- **Adaptive Signal Control**: Automatically adjusts traffic light timings based on current traffic volume and patterns
-- **Cost-Effective Hardware**: Minimizes infrastructure costs while maximizing efficacy
-- **User-Friendly Dashboard**: Modern React-based interface for traffic monitoring and system management
+## ✨ Key Features
 
-## Technical Architecture
+### Traffic Monitoring & Control
+- **Real-Time Traffic Lights**: Live Arduino synchronization via WebSocket
+- **Live Countdown Timer**: Real-time display updates every second
+- **Manual Control**: Instant red/yellow/green button controls
+- **Automatic Mode**: AI-ready autonomous cycling
+- **Emergency Override**: One-click all-red safety mode
 
-- **Frontend**: React + TypeScript + Vite for a responsive, high-performance user interface
-- **Computer Vision**: OpenCV and YOLO for vehicle detection and classification
-- **Analytics**: Real-time and historical traffic pattern analysis
-- **Hardware**: Optimized for standard cameras and computing hardware
+### Camera & Vision
+- **Multi-Camera Support**: Dual USB camera feeds with split-screen
+- **Vehicle Detection**: OpenCV and YOLO for accurate detection (Coming Soon)
+- **PTZ Controls**: Pan/Tilt/Zoom simulation in fullscreen view
+- **Dynamic Resolution**: Auto-adjusts for USB bandwidth
+
+### Hardware Integration
+- **Arduino Uno**: Physical LED control (12 LEDs for 4 roads)
+- **Node.js Bridge**: Express REST API + WebSocket server
+- **Serial Communication**: 9600 baud USB connection
+- **Safety Logic**: Only one road green at a time
+
+### User Interface
+- **Modern React Dashboard**: TypeScript + Material-UI
+- **Fullscreen Monitoring**: Dedicated view for traffic lights
+- **Connection Status**: Live Arduino connection indicator
+- **Responsive Design**: Works on desktop, tablet, mobile
+
+## 🏗️ Technical Architecture
+
+```
+React Web App (Port 5173)
+    ↕ REST API & WebSocket
+Node.js Bridge (Port 3001 & 3002)
+    ↕ Serial Communication (9600 baud)
+Arduino Uno
+    ↕ Digital Pins 2-13
+12 LEDs (4 roads × 3 colors)
+```
+
+### Technology Stack
+
+- **Frontend**: React 18 + TypeScript + Vite + Material-UI v6
+- **Backend**: Node.js + Express + WebSocket (ws)
+- **Hardware**: Arduino Uno + SerialPort library
+- **Computer Vision**: OpenCV + YOLO (in development)
+- **Real-Time**: WebSocket for instant updates
+- **API**: RESTful endpoints for control commands
 
 ## Benefits
 
@@ -29,22 +64,64 @@ This system leverages computer vision and machine learning to analyze traffic pa
 - **Cost Savings**: Significant reduction in implementation costs compared to proprietary systems
 - **Scalability**: Easily deployable across multiple intersections
 
-## Development
+## 🚀 Quick Start
 
-This project uses React with TypeScript and Vite. Below are instructions for developers working on the system.
+### Prerequisites
+- Node.js 16+ installed
+- Arduino Uno with USB cable
+- 12 LEDs + 220Ω resistors (optional, for visual feedback)
+- 2 USB cameras (optional, for video monitoring)
 
-### Setup
+### Installation
 
-1. Clone the repository
-2. Install dependencies: `npm install`
-3. Start the development server: `npm run dev`
+```powershell
+# 1. Install dependencies
+npm install
 
-### Available Scripts
+cd arduino-bridge
+npm install
+cd ..
 
-- `npm run dev` - Starts the development server
-- `npm run build` - Builds the app for production
-- `npm run lint` - Runs the linter
-- `npm run preview` - Previews the built app locally
+# 2. Upload Arduino code
+# Open Arduino IDE
+# Load: arduino/traffic_light_control/traffic_light_control.ino
+# Upload to Arduino Uno
+
+# 3. Start everything (automatic)
+.\start-system.ps1
+
+# OR start manually:
+# Terminal 1: Bridge server
+cd arduino-bridge
+node server.js
+
+# Terminal 2: React app
+npm run dev
+```
+
+### View Real-Time Monitor
+
+1. Open: `http://localhost:5173/camera/1`
+2. Click fullscreen button ⛶
+3. Select "Traffic Lights" tab
+4. Watch live timer and lights! 🎉
+
+## 📚 Documentation
+
+- **[ARDUINO_SETUP_SUMMARY.md](./ARDUINO_SETUP_SUMMARY.md)** - Complete setup guide ⭐ Start here!
+- **[REALTIME_SYNC_GUIDE.md](./REALTIME_SYNC_GUIDE.md)** - Real-time synchronization details
+- **[ARDUINO_INTEGRATION_GUIDE.md](./ARDUINO_INTEGRATION_GUIDE.md)** - Technical deep dive
+- **[DEMO_SCRIPT.md](./DEMO_SCRIPT.md)** - Demo walkthrough
+- **[COMPLETE_SYSTEM_OVERVIEW.md](./COMPLETE_SYSTEM_OVERVIEW.md)** - Full feature summary
+
+## 🎯 Available Scripts
+
+- `npm run dev` - Start development server
+- `npm run build` - Build for production
+- `npm run lint` - Run ESLint
+- `npm run preview` - Preview production build
+- `.\start-system.ps1` - Auto-start everything (Windows)
+- `.\test-arduino.ps1` - Test Arduino connection (Windows)
 
 ## License
 
