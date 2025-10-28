@@ -3,9 +3,18 @@ const cors = require('cors');
 const { SerialPort } = require('serialport');
 const { ReadlineParser } = require('@serialport/parser-readline');
 const WebSocket = require('ws');
+const axios = require('axios');
+const multer = require('multer');
+const FormData = require('form-data');
 
 const app = express();
 const PORT = 3001;
+
+// AI Server configuration
+const AI_SERVER_URL = 'http://localhost:5000';
+
+// Multer configuration for file uploads (store in memory)
+const upload = multer({ storage: multer.memoryStorage() });
 
 // Middleware
 app.use(cors());
@@ -316,6 +325,109 @@ app.post('/api/emergency-stop', async (req, res) => {
   }
 });
 
+// ============================================
+// AI SERVICE PROXY ROUTES
+// ============================================
+
+// Health check for AI server
+app.get('/api/ai/health', async (req, res) => {
+  try {
+    const response = await axios.get(`${AI_SERVER_URL}/health`);
+    res.json(response.data);
+  } catch (error) {
+    res.status(503).json({
+      status: 'unavailable',
+      error: 'AI server is not responding',
+      message: error.message
+    });
+  }
+});
+
+// Detect vehicles in uploaded image
+app.post('/api/detect', upload.single('image'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'No image file provided' 
+      });
+    }
+    
+    console.log('Received image file:', {
+      originalname: req.file.originalname,
+      mimetype: req.file.mimetype,
+      size: req.file.size
+    });
+    
+    // Create FormData and append the image file
+    const formData = new FormData();
+    formData.append('image', req.file.buffer, {
+      filename: req.file.originalname,
+      contentType: req.file.mimetype
+    });
+    
+    // Forward to AI server
+    const response = await axios.post(`${AI_SERVER_URL}/detect`, formData, {
+      headers: {
+        ...formData.getHeaders()
+      },
+      maxContentLength: Infinity,
+      maxBodyLength: Infinity
+    });
+    
+    console.log('AI detection successful:', {
+      total_vehicles: response.data.total_vehicles,
+      detections_count: response.data.detections?.length || 0
+    });
+    
+    res.json(response.data);
+  } catch (error) {
+    console.error('AI detection error:', error.response?.data || error.message);
+    res.status(500).json({ 
+      success: false,
+      error: 'AI detection failed',
+      message: error.response?.data?.error || error.message 
+    });
+  }
+});
+
+// Get analytics for an intersection
+app.get('/api/analytics/:intersectionId', async (req, res) => {
+  try {
+    const { intersectionId } = req.params;
+    const response = await axios.get(`${AI_SERVER_URL}/analytics/${intersectionId}`);
+    res.json(response.data);
+  } catch (error) {
+    console.error('Analytics error:', error.message);
+    res.status(500).json({ 
+      error: 'Analytics fetch failed',
+      message: error.message 
+    });
+  }
+});
+
+// Stream detection endpoint (proxy SSE)
+app.get('/api/detect/stream/:cameraId', async (req, res) => {
+  try {
+    const { cameraId } = req.params;
+    const response = await axios.get(`${AI_SERVER_URL}/detect/stream/${cameraId}`, {
+      responseType: 'stream'
+    });
+    
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    
+    response.data.pipe(res);
+  } catch (error) {
+    console.error('Stream detection error:', error.message);
+    res.status(500).json({ 
+      error: 'Stream detection failed',
+      message: error.message 
+    });
+  }
+});
+
 // Health check
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', arduino: isConnected });
@@ -332,7 +444,7 @@ app.listen(PORT, async () => {
   
   if (isConnected) {
     console.log('\n✅ Ready to receive commands!');
-    console.log('\nAPI Endpoints:');
+    console.log('\nArduino API Endpoints:');
     console.log('  GET  /api/status              - Get connection status');
     console.log('  GET  /api/ports               - List available ports');
     console.log('  POST /api/connect             - Connect to Arduino');
@@ -340,6 +452,11 @@ app.listen(PORT, async () => {
     console.log('  POST /api/mode/:mode          - Set mode (AUTO/STOP/TEST)');
     console.log('  POST /api/light/:road/:color  - Set specific light');
     console.log('  POST /api/emergency-stop      - Emergency stop (all red)');
+    console.log('\nAI Service Endpoints:');
+    console.log('  GET  /api/ai/health           - Check AI server status');
+    console.log('  POST /api/detect              - Detect vehicles in image');
+    console.log('  GET  /api/analytics/:id       - Get traffic analytics');
+    console.log('  GET  /api/detect/stream/:id   - Stream detection (SSE)');
   } else {
     console.log('\n⚠️  Arduino not connected. Please check connection and try again.');
   }

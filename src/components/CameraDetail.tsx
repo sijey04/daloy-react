@@ -47,6 +47,7 @@ import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
 import Header from './Header';
 import Sidebar from './Sidebar';
 import { TrafficLightOverlay } from './shared/TrafficLightOverlay';
+import { aiService, DetectionResponse } from '../services/aiService';
 
 // Add pulse animation keyframes
 const pulseAnimation = `
@@ -244,12 +245,25 @@ interface ArduinoStatus {
   };
 }
 
-// Component to load and display a camera stream dynamically
-const DynamicCameraStream = ({ camera, opacity = 1 }: { camera: Camera; opacity?: number }) => {
+// Component to load and display a camera stream dynamically with AI detection support
+const DynamicCameraStream = ({ 
+  camera, 
+  opacity = 1,
+  enableDetection = false,
+  onDetection
+}: { 
+  camera: Camera; 
+  opacity?: number;
+  enableDetection?: boolean;
+  onDetection?: (result: DetectionResponse) => void;
+}) => {
   const videoRef = React.useRef<HTMLVideoElement>(null);
+  const canvasRef = React.useRef<HTMLCanvasElement>(null);
+  const detectionCanvasRef = React.useRef<HTMLCanvasElement>(null);
   const streamRef = React.useRef<MediaStream | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const detectionIntervalRef = React.useRef<number | null>(null);
 
   useEffect(() => {
     const initCamera = async () => {
@@ -316,6 +330,132 @@ const DynamicCameraStream = ({ camera, opacity = 1 }: { camera: Camera; opacity?
     };
   }, [camera.id]);
 
+  // AI Detection Effect (for DynamicCameraStream)
+  useEffect(() => {
+    if (!enableDetection || !videoRef.current || !canvasRef.current || !detectionCanvasRef.current) {
+      // Clear any existing detection
+      if (detectionIntervalRef.current) {
+        clearInterval(detectionIntervalRef.current);
+        detectionIntervalRef.current = null;
+      }
+      // Clear detection canvas
+      if (detectionCanvasRef.current) {
+        const ctx = detectionCanvasRef.current.getContext('2d');
+        if (ctx) {
+          ctx.clearRect(0, 0, detectionCanvasRef.current.width, detectionCanvasRef.current.height);
+        }
+      }
+      return;
+    }
+
+    const processCanvas = canvasRef.current;
+    const detectionCanvas = detectionCanvasRef.current;
+    const video = videoRef.current;
+
+    // Wait for video to be fully loaded before starting detection
+    const startDetection = () => {
+      // Verify video has valid dimensions
+      if (video.videoWidth === 0 || video.videoHeight === 0) {
+        console.warn('Video not ready yet, waiting...');
+        return;
+      }
+
+      console.log(`Starting AI detection - Video size: ${video.videoWidth}x${video.videoHeight}`);
+
+      // Helper function to draw video frame to canvas (rotated 180 degrees)
+      const captureFrame = () => {
+        if (video.readyState === video.HAVE_ENOUGH_DATA && video.videoWidth > 0) {
+          processCanvas.width = video.videoWidth;
+          processCanvas.height = video.videoHeight;
+          const ctx = processCanvas.getContext('2d');
+          if (ctx) {
+            // Save the current context state
+            ctx.save();
+            
+            // Rotate 180 degrees around the center of the canvas
+            ctx.translate(processCanvas.width / 2, processCanvas.height / 2);
+            ctx.rotate(Math.PI); // 180 degrees in radians
+            ctx.translate(-processCanvas.width / 2, -processCanvas.height / 2);
+            
+            // Draw the video frame
+            ctx.drawImage(video, 0, 0);
+            
+            // Restore the context state
+            ctx.restore();
+            
+            console.log('Frame captured (rotated 180°):', processCanvas.width, 'x', processCanvas.height);
+          }
+        }
+      };
+
+      // Capture first frame immediately
+      captureFrame();
+
+      // Start detection interval
+      const intervalId = aiService.startRealtimeDetection(
+        processCanvas,
+        (result) => {
+          console.log('Detection result:', result);
+          // Set detection canvas size to match video
+          detectionCanvas.width = video.videoWidth;
+          detectionCanvas.height = video.videoHeight;
+          
+          // Draw detections on overlay canvas
+          aiService.drawDetections(detectionCanvas, result.detections);
+          
+          // Notify parent component
+          if (onDetection) {
+            onDetection(result);
+          }
+        },
+        (error: Error) => {
+          console.error('Detection error:', error);
+        },
+        3000 // Detection interval: 3 seconds
+      );
+
+      // Capture frames periodically (slightly before detection to ensure fresh frame)
+      const frameInterval = setInterval(captureFrame, 2900);
+
+      detectionIntervalRef.current = intervalId;
+
+      return () => {
+        if (intervalId) {
+          aiService.stopRealtimeDetection(intervalId);
+        }
+        if (frameInterval) {
+          clearInterval(frameInterval);
+        }
+      };
+    };
+
+    // Wait for video to be ready
+    if (video.readyState >= video.HAVE_ENOUGH_DATA && video.videoWidth > 0) {
+      // Video is ready, start immediately
+      const cleanup = startDetection();
+      return cleanup;
+    } else {
+      // Wait for video to load
+      const onLoadedData = () => {
+        console.log('Video loaded, starting detection...');
+        const cleanup = startDetection();
+        if (cleanup) {
+          // Store cleanup for later
+          return cleanup;
+        }
+      };
+      
+      video.addEventListener('loadeddata', onLoadedData);
+      
+      return () => {
+        video.removeEventListener('loadeddata', onLoadedData);
+        if (detectionIntervalRef.current) {
+          aiService.stopRealtimeDetection(detectionIntervalRef.current);
+        }
+      };
+    }
+  }, [enableDetection, onDetection]);
+
   return (
     <>
       {isLoading && (
@@ -365,7 +505,28 @@ const DynamicCameraStream = ({ camera, opacity = 1 }: { camera: Camera; opacity?
           objectFit: 'contain',
           opacity: opacity,
           transition: 'opacity 0.3s ease-in-out',
-          display: isLoading || error ? 'none' : 'block'
+          display: isLoading || error ? 'none' : 'block',
+          transform: 'rotate(180deg)'
+        }}
+      />
+      
+      {/* Hidden canvas for frame processing */}
+      <canvas
+        ref={canvasRef}
+        style={{ display: 'none' }}
+      />
+      
+      {/* Overlay canvas for detection bounding boxes */}
+      <canvas
+        ref={detectionCanvasRef}
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          pointerEvents: 'none',
+          transform: 'rotate(180deg)'
         }}
       />
     </>
@@ -401,9 +562,24 @@ function TabPanel(props: TabPanelProps) {
 }
 
 // Camera Feed component
-const CameraFeed = ({ camera, allCameras, trafficLights }: { camera: Camera; allCameras: Camera[]; trafficLights?: TrafficLight[] }) => {
+const CameraFeed = ({ 
+  camera, 
+  allCameras, 
+  trafficLights,
+  enableDetection = false,
+  onDetection
+}: { 
+  camera: Camera; 
+  allCameras: Camera[]; 
+  trafficLights?: TrafficLight[];
+  enableDetection?: boolean;
+  onDetection?: (result: DetectionResponse) => void;
+}) => {
   const videoRef = React.useRef<HTMLVideoElement>(null);
   const streamRef = React.useRef<MediaStream | null>(null);
+  const canvasRef = React.useRef<HTMLCanvasElement>(null);
+  const detectionCanvasRef = React.useRef<HTMLCanvasElement>(null);
+  const detectionIntervalRef = React.useRef<number | null>(null);
   const [zoom, setZoom] = useState(camera.zoom);
   const [pan, setPan] = useState(camera.orientation);
   const [tilt, setTilt] = useState(0);
@@ -605,6 +781,132 @@ const CameraFeed = ({ camera, allCameras, trafficLights }: { camera: Camera; all
     };
   }, []);
 
+  // AI Detection Effect (for CameraFeed)
+  useEffect(() => {
+    if (!enableDetection || !videoRef.current || !canvasRef.current || !detectionCanvasRef.current) {
+      // Clear any existing detection
+      if (detectionIntervalRef.current) {
+        clearInterval(detectionIntervalRef.current);
+        detectionIntervalRef.current = null;
+      }
+      // Clear detection canvas
+      if (detectionCanvasRef.current) {
+        const ctx = detectionCanvasRef.current.getContext('2d');
+        if (ctx) {
+          ctx.clearRect(0, 0, detectionCanvasRef.current.width, detectionCanvasRef.current.height);
+        }
+      }
+      return;
+    }
+
+    const processCanvas = canvasRef.current;
+    const detectionCanvas = detectionCanvasRef.current;
+    const video = videoRef.current;
+
+    // Wait for video to be fully loaded before starting detection
+    const startDetection = () => {
+      // Verify video has valid dimensions
+      if (video.videoWidth === 0 || video.videoHeight === 0) {
+        console.warn('Video not ready yet, waiting...');
+        return;
+      }
+
+      console.log(`Starting AI detection for camera - Video size: ${video.videoWidth}x${video.videoHeight}`);
+
+      // Helper function to draw video frame to canvas (rotated 180 degrees)
+      const captureFrame = () => {
+        if (video.readyState === video.HAVE_ENOUGH_DATA && video.videoWidth > 0) {
+          processCanvas.width = video.videoWidth;
+          processCanvas.height = video.videoHeight;
+          const ctx = processCanvas.getContext('2d');
+          if (ctx) {
+            // Save the current context state
+            ctx.save();
+            
+            // Rotate 180 degrees around the center of the canvas
+            ctx.translate(processCanvas.width / 2, processCanvas.height / 2);
+            ctx.rotate(Math.PI); // 180 degrees in radians
+            ctx.translate(-processCanvas.width / 2, -processCanvas.height / 2);
+            
+            // Draw the video frame
+            ctx.drawImage(video, 0, 0);
+            
+            // Restore the context state
+            ctx.restore();
+            
+            console.log('Frame captured (rotated 180°):', processCanvas.width, 'x', processCanvas.height);
+          }
+        }
+      };
+
+      // Capture first frame immediately
+      captureFrame();
+
+      // Start detection interval
+      const intervalId = aiService.startRealtimeDetection(
+        processCanvas,
+        (result) => {
+          console.log('Detection result:', result);
+          // Set detection canvas size to match video
+          detectionCanvas.width = video.videoWidth;
+          detectionCanvas.height = video.videoHeight;
+          
+          // Draw detections on overlay canvas
+          aiService.drawDetections(detectionCanvas, result.detections);
+          
+          // Notify parent component
+          if (onDetection) {
+            onDetection(result);
+          }
+        },
+        (error: Error) => {
+          console.error('Detection error:', error);
+        },
+        3000 // Detection interval: 3 seconds
+      );
+
+      // Capture frames periodically (slightly before detection to ensure fresh frame)
+      const frameInterval = setInterval(captureFrame, 2900);
+
+      detectionIntervalRef.current = intervalId;
+
+      return () => {
+        if (intervalId) {
+          aiService.stopRealtimeDetection(intervalId);
+        }
+        if (frameInterval) {
+          clearInterval(frameInterval);
+        }
+      };
+    };
+
+    // Wait for video to be ready
+    if (video.readyState >= video.HAVE_ENOUGH_DATA && video.videoWidth > 0) {
+      // Video is ready, start immediately
+      const cleanup = startDetection();
+      return cleanup;
+    } else {
+      // Wait for video to load
+      const onLoadedData = () => {
+        console.log('Video loaded, starting detection...');
+        const cleanup = startDetection();
+        if (cleanup) {
+          // Store cleanup for later
+          return cleanup;
+        }
+      };
+      
+      video.addEventListener('loadeddata', onLoadedData);
+      
+      return () => {
+        video.removeEventListener('loadeddata', onLoadedData);
+        if (detectionIntervalRef.current) {
+          aiService.stopRealtimeDetection(detectionIntervalRef.current);
+        }
+      };
+    }
+  }, [enableDetection, onDetection]);
+
   const handleZoomChange = (_event: Event, newValue: number | number[]) => {
     setZoom(newValue as number);
   };
@@ -759,8 +1061,28 @@ const CameraFeed = ({ camera, allCameras, trafficLights }: { camera: Camera; all
               width: '100%',
               height: '100%',
               objectFit: 'cover',
-              transform: `scale(${zoom})`,
+              transform: `rotate(180deg) scale(${zoom})`,
               display: isLoading || cameraError ? 'none' : 'block'
+            }}
+          />
+
+          {/* Hidden canvas for frame processing */}
+          <canvas
+            ref={canvasRef}
+            style={{ display: 'none' }}
+          />
+          
+          {/* Overlay canvas for detection bounding boxes */}
+          <canvas
+            ref={detectionCanvasRef}
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              pointerEvents: 'none',
+              transform: `rotate(180deg) scale(${zoom})`
             }}
           />
 
@@ -2829,6 +3151,10 @@ export const CameraDetail = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(true);
   const [trafficLightOverlayOpen, setTrafficLightOverlayOpen] = useState(false);
+  
+  // AI Detection state
+  const [detectionEnabled, setDetectionEnabled] = useState(false);
+  const [aiServerHealthy, setAiServerHealthy] = useState<boolean | null>(null);
 
   useEffect(() => {
     // Simulate loading data
@@ -2839,6 +3165,42 @@ export const CameraDetail = () => {
 
     return () => clearTimeout(timer);
   }, [id]);
+
+  // Check AI server health on mount
+  useEffect(() => {
+    const checkAIHealth = async () => {
+      const healthy = await aiService.checkHealth();
+      setAiServerHealthy(healthy);
+    };
+    
+    checkAIHealth();
+    
+    // Check every 30 seconds
+    const interval = setInterval(checkAIHealth, 30000);
+    
+    return () => clearInterval(interval);
+  }, []);
+
+  // Handle detection updates from camera
+  const handleDetection = (_cameraId: number, result: DetectionResponse) => {
+    // Update intersection data with real detection
+    if (intersectionData) {
+      setIntersectionData({
+        ...intersectionData,
+        vehicleCount: result.total_vehicles,
+        trafficAnalysis: {
+          ...intersectionData.trafficAnalysis,
+          vehicleTypes: {
+            cars: result.vehicle_counts.car,
+            trucks: result.vehicle_counts.truck,
+            buses: result.vehicle_counts.bus,
+            motorcycles: result.vehicle_counts.motorcycle,
+            bicycles: result.vehicle_counts.bicycle,
+          },
+        },
+      });
+    }
+  };
 
   const handleMainTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setMainTabValue(newValue);
@@ -2946,6 +3308,63 @@ export const CameraDetail = () => {
                       '#f44336'
               }} 
             />
+            
+            {/* AI Detection Toggle */}
+            <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', gap: 1 }}>
+              <FormControlLabel
+                control={
+                  <Switch 
+                    checked={detectionEnabled}
+                    onChange={(e) => setDetectionEnabled(e.target.checked)}
+                    disabled={aiServerHealthy === false}
+                    color="primary"
+                  />
+                }
+                label={
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                      🤖 AI Detection
+                    </Typography>
+                    {aiServerHealthy === true && (
+                      <Chip 
+                        label="Online" 
+                        size="small" 
+                        sx={{ 
+                          backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                          color: '#4caf50',
+                          height: '20px',
+                          fontSize: '0.7rem'
+                        }}
+                      />
+                    )}
+                    {aiServerHealthy === false && (
+                      <Chip 
+                        label="Offline" 
+                        size="small" 
+                        sx={{ 
+                          backgroundColor: 'rgba(244, 67, 54, 0.1)',
+                          color: '#f44336',
+                          height: '20px',
+                          fontSize: '0.7rem'
+                        }}
+                      />
+                    )}
+                    {aiServerHealthy === null && (
+                      <Chip 
+                        label="Checking..." 
+                        size="small" 
+                        sx={{ 
+                          backgroundColor: 'rgba(158, 158, 158, 0.1)',
+                          color: '#9e9e9e',
+                          height: '20px',
+                          fontSize: '0.7rem'
+                        }}
+                      />
+                    )}
+                  </Box>
+                }
+              />
+            </Box>
           </Box>
           
           <Typography variant="subtitle1" color="text.secondary" sx={{ mb: 3 }}>
@@ -3029,6 +3448,8 @@ export const CameraDetail = () => {
                         camera={camera} 
                         allCameras={intersectionData.cameras}
                         trafficLights={intersectionData.trafficLights}
+                        enableDetection={detectionEnabled}
+                        onDetection={(result) => handleDetection(camera.id, result)}
                       />
                     </Box>
                   ))}
