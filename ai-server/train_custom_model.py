@@ -8,8 +8,8 @@ import torch
 import os
 from datetime import datetime
 
-def train_toy_car_model(
-    data_yaml='datasets/toy_cars/data.yaml',
+def train_emergency_vehicle_model(
+    data_yaml='datasets/emergency_vehicles/data.yaml',
     base_model='yolo11n.pt',
     epochs=100,
     img_size=640,
@@ -17,9 +17,9 @@ def train_toy_car_model(
     device=None
 ):
     """
-    Train YOLOv11 model on custom toy car dataset
+    Train YOLOv11 model on custom emergency vehicle dataset
     
-    Args:
+    Args:8
         data_yaml: Path to dataset configuration file
         base_model: Pretrained model to start from (transfer learning)
         epochs: Number of training epochs
@@ -29,7 +29,7 @@ def train_toy_car_model(
     """
     
     print("\n" + "="*80)
-    print("🚗 TRAINING CUSTOM TOY CAR DETECTION MODEL")
+    print("� TRAINING CUSTOM EMERGENCY VEHICLE DETECTION MODEL")
     print("="*80)
     
     # Auto-detect device if not specified
@@ -57,10 +57,10 @@ def train_toy_car_model(
     print(f"\n📥 Loading base model: {base_model}")
     model = YOLO(base_model)
     
-    # Training hyperparameters optimized for toy cars (small objects)
+    # Training hyperparameters optimized for emergency vehicles
     print("\n🎯 Starting training...")
     print("   This may take several hours depending on your hardware")
-    print("   Progress will be saved in runs/detect/toy_car_detection/")
+    print("   Progress will be saved in runs/detect/emergency_vehicle_detection/")
     
     try:
         results = model.train(
@@ -85,7 +85,7 @@ def train_toy_car_model(
             
             # Project organization
             project='runs/detect',
-            name='toy_car_detection',
+            name='emergency_vehicle_detection',
             exist_ok=True,
             
             # Logging
@@ -208,8 +208,8 @@ def resume_training(checkpoint_path='runs/detect/toy_car_detection/weights/last.
 if __name__ == "__main__":
     import argparse
     
-    parser = argparse.ArgumentParser(description='Train custom YOLOv11 model for toy cars')
-    parser.add_argument('--data', type=str, default='datasets/toy_cars/data.yaml',
+    parser = argparse.ArgumentParser(description='Train custom YOLOv11 model for emergency vehicles')
+    parser.add_argument('--data', type=str, default='datasets/emergency_vehicles/data.yaml',
                        help='Path to dataset YAML file')
     parser.add_argument('--model', type=str, default='yolo11n.pt',
                        help='Base model to use (yolo11n.pt, yolo11s.pt, yolo11m.pt)')
@@ -229,7 +229,7 @@ if __name__ == "__main__":
     if args.resume:
         resume_training(args.resume)
     else:
-        train_toy_car_model(
+        train_emergency_vehicle_model(
             data_yaml=args.data,
             base_model=args.model,
             epochs=args.epochs,

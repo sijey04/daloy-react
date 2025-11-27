@@ -270,6 +270,127 @@ class ArduinoService {
       return false;
     }
   }
+
+  // ============================================
+  // ADAPTIVE TRAFFIC LIGHT CONTROL (AI-DRIVEN)
+  // ============================================
+
+  /**
+   * Calculate adaptive green light duration based on AI detection results
+   * Formula: baseTime + (vehicleCount × timePerVehicle) + waitTimeBonus + emergencyBonus
+   * 
+   * @param vehicleCount - Number of vehicles detected in lane
+   * @param waitTimeSec - How long this lane has been waiting (in seconds)
+   * @param hasEmergency - Whether emergency vehicle (ambulance/fire truck/police) detected
+   * @returns Optimal green light duration in seconds (clamped to 15-60s)
+   */
+  calculateAdaptiveGreenTime(
+    vehicleCount: number,
+    waitTimeSec: number = 0,
+    hasEmergency: boolean = false
+  ): number {
+    const BASE_TIME = 15; // Minimum green time (seconds)
+    const TIME_PER_VEHICLE = 3; // Additional seconds per vehicle
+    const MAX_GREEN_TIME = 60; // Maximum green time (seconds)
+    const MIN_GREEN_TIME = 15; // Minimum green time (seconds)
+    const WAIT_TIME_BONUS_FACTOR = 0.5; // Bonus seconds per second of wait time
+    const EMERGENCY_BONUS = 30; // Extra seconds for emergency vehicles
+    
+    // Base calculation
+    let greenTime = BASE_TIME;
+    
+    // Add time based on vehicle count
+    greenTime += vehicleCount * TIME_PER_VEHICLE;
+    
+    // Add bonus for lanes that have been waiting longer (prevent starvation)
+    if (waitTimeSec > 30) { // Only apply bonus after 30s of waiting
+      const waitBonus = (waitTimeSec - 30) * WAIT_TIME_BONUS_FACTOR;
+      greenTime += Math.min(waitBonus, 15); // Cap wait bonus at 15s
+    }
+    
+    // Emergency vehicle priority - significant time extension
+    if (hasEmergency) {
+      greenTime += EMERGENCY_BONUS;
+      console.log('🚨 EMERGENCY VEHICLE DETECTED - Extended green time');
+    }
+    
+    // Clamp to min/max range
+    greenTime = Math.max(MIN_GREEN_TIME, Math.min(MAX_GREEN_TIME, Math.round(greenTime)));
+    
+    console.log(`🟢 Adaptive Green Time: ${greenTime}s (vehicles: ${vehicleCount}, wait: ${waitTimeSec}s, emergency: ${hasEmergency})`);
+    
+    return greenTime;
+  }
+
+  /**
+   * Apply AI-driven traffic light decision to Arduino hardware
+   * This is the bridge between AI detection and physical traffic lights
+   * 
+   * @param direction - Lane direction (east/west/south/north)
+   * @param greenDuration - Calculated green light duration in seconds
+   * @param yellowDuration - Yellow light duration (default 5s)
+   * @returns Success status
+   */
+  async applyTrafficLightDecision(
+    direction: 'east' | 'west' | 'south' | 'north',
+    greenDuration: number,
+    yellowDuration: number = 5
+  ): Promise<boolean> {
+    try {
+      console.log(`🚦 Applying AI decision: ${direction.toUpperCase()} → Green for ${greenDuration}s`);
+      
+      // Map direction to Arduino road designation
+      const roadMap: { [key: string]: 'north-south' | 'east-west' | 'road3' | 'road4' } = {
+        'north': 'north-south',
+        'south': 'north-south',
+        'east': 'east-west',
+        'west': 'east-west'
+      };
+      
+      const road = roadMap[direction];
+      if (!road) {
+        console.error(`Invalid direction: ${direction}`);
+        return false;
+      }
+      
+      // Step 1: Set all lights to red for safety (clearance phase)
+      await this.setMode('STOP');
+      await new Promise(resolve => setTimeout(resolve, 2000)); // 2s all-red clearance
+      
+      // Step 2: Configure timing for this cycle
+      await this.sendCommand(`SET_GREEN:${greenDuration}`);
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
+      await this.sendCommand(`SET_YELLOW:${yellowDuration}`);
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
+      // Step 3: Activate green light for the calculated direction
+      const success = await this.setLight(road, 'green');
+      
+      if (success) {
+        console.log(`✅ ${direction.toUpperCase()} lane activated with ${greenDuration}s green time`);
+        
+        // Step 4: Schedule yellow light transition
+        setTimeout(async () => {
+          await this.setLight(road, 'yellow');
+          console.log(`🟡 ${direction.toUpperCase()} → Yellow (${yellowDuration}s)`);
+          
+          // Step 5: Schedule red light after yellow
+          setTimeout(async () => {
+            await this.setLight(road, 'red');
+            console.log(`🔴 ${direction.toUpperCase()} → Red`);
+          }, yellowDuration * 1000);
+        }, greenDuration * 1000);
+      }
+      
+      return success;
+    } catch (error) {
+      console.error(`Error applying traffic light decision for ${direction}:`, error);
+      // Safety fallback: emergency stop
+      await this.emergencyStop();
+      return false;
+    }
+  }
 }
 
 // Export singleton instance

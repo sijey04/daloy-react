@@ -9,7 +9,7 @@ import random
 from pathlib import Path
 import yaml
 
-def create_directory_structure(base_dir='datasets/toy_cars'):
+def create_directory_structure(base_dir='datasets/emergency_vehicles'):
     """
     Create YOLO dataset directory structure
     """
@@ -27,8 +27,8 @@ def create_directory_structure(base_dir='datasets/toy_cars'):
         print(f"✅ Created: {d}")
 
 
-def split_dataset(source_dir='datasets/toy_cars/images', 
-                  dest_dir='datasets/toy_cars',
+def split_dataset(source_dir='datasets/emergency_vehicles/images', 
+                  dest_dir='datasets/emergency_vehicles',
                   train_ratio=0.7, 
                   val_ratio=0.2, 
                   test_ratio=0.1):
@@ -36,19 +36,19 @@ def split_dataset(source_dir='datasets/toy_cars/images',
     Split images into train/val/test sets
     
     Args:
-        source_dir: Source directory with angle subdirectories
+        source_dir: Source directory with vehicle type subdirectories
         dest_dir: Destination base directory
         train_ratio: Proportion for training (0.7 = 70%)
         val_ratio: Proportion for validation (0.2 = 20%)
         test_ratio: Proportion for testing (0.1 = 10%)
     """
     
-    angles = ['front', 'back', 'left', 'right']
+    vehicle_types = ['fire_truck', 'police_car', 'ambulance', 'normal_vehicle']
     class_map = {
-        'front': 0,
-        'back': 1,
-        'left': 2,
-        'right': 3
+        'fire_truck': 0,
+        'police_car': 1,
+        'ambulance': 2,
+        'normal_vehicle': 3
     }
     
     print("\n" + "="*60)
@@ -59,19 +59,19 @@ def split_dataset(source_dir='datasets/toy_cars/images',
     total_val = 0
     total_test = 0
     
-    for angle in angles:
-        angle_dir = os.path.join(source_dir, angle)
+    for vehicle_type in vehicle_types:
+        vehicle_dir = os.path.join(source_dir, vehicle_type)
         
-        if not os.path.exists(angle_dir):
-            print(f"⚠️  {angle}: Directory not found, skipping")
+        if not os.path.exists(vehicle_dir):
+            print(f"⚠️  {vehicle_type}: Directory not found, skipping")
             continue
         
         # Get all image files
-        image_files = [f for f in os.listdir(angle_dir) 
+        image_files = [f for f in os.listdir(vehicle_dir) 
                       if f.endswith(('.jpg', '.jpeg', '.png'))]
         
         if not image_files:
-            print(f"⚠️  {angle}: No images found, skipping")
+            print(f"⚠️  {vehicle_type}: No images found, skipping")
             continue
         
         # Shuffle for random split
@@ -87,14 +87,14 @@ def split_dataset(source_dir='datasets/toy_cars/images',
         test_files = image_files[val_end:]
         
         # Copy files to respective directories
-        class_id = class_map[angle]
+        class_id = class_map[vehicle_type]
         
         for split_name, split_files in [('train', train_files), 
                                          ('val', val_files), 
                                          ('test', test_files)]:
             for img_file in split_files:
                 # Copy image
-                src_img = os.path.join(angle_dir, img_file)
+                src_img = os.path.join(vehicle_dir, img_file)
                 dst_img = os.path.join(dest_dir, 'images', split_name, img_file)
                 shutil.copy2(src_img, dst_img)
                 
@@ -115,7 +115,7 @@ def split_dataset(source_dir='datasets/toy_cars/images',
         total_val += len(val_files)
         total_test += len(test_files)
         
-        print(f"✅ {angle:8s}: {len(train_files):3d} train, {len(val_files):3d} val, {len(test_files):3d} test")
+        print(f"✅ {vehicle_type:16s}: {len(train_files):3d} train, {len(val_files):3d} val, {len(test_files):3d} test")
     
     print("="*60)
     print(f"Total split: {total_train} train, {total_val} val, {total_test} test")
@@ -127,7 +127,7 @@ def split_dataset(source_dir='datasets/toy_cars/images',
     print("   - CVAT: https://cvat.org")
 
 
-def create_data_yaml(base_dir='datasets/toy_cars'):
+def create_data_yaml(base_dir='datasets/emergency_vehicles'):
     """
     Create data.yaml configuration file for YOLO training
     """
@@ -141,7 +141,7 @@ def create_data_yaml(base_dir='datasets/toy_cars'):
         'val': 'images/val',
         'test': 'images/test',
         'nc': 4,  # number of classes
-        'names': ['toy_car_front', 'toy_car_back', 'toy_car_left', 'toy_car_right']
+        'names': ['fire_truck', 'police_car', 'ambulance', 'normal_vehicle']
     }
     
     yaml_path = os.path.join(base_dir, 'data.yaml')
@@ -154,11 +154,11 @@ def create_data_yaml(base_dir='datasets/toy_cars'):
     print(yaml.dump(config, default_flow_style=False, sort_keys=False))
 
 
-def create_classes_file(base_dir='datasets/toy_cars'):
+def create_classes_file(base_dir='datasets/emergency_vehicles'):
     """
     Create classes.txt file
     """
-    classes = ['toy_car_front', 'toy_car_back', 'toy_car_left', 'toy_car_right']
+    classes = ['fire_truck', 'police_car', 'ambulance', 'normal_vehicle']
     
     classes_path = os.path.join(base_dir, 'classes.txt')
     
@@ -170,7 +170,7 @@ def create_classes_file(base_dir='datasets/toy_cars'):
 
 
 if __name__ == "__main__":
-    print("\n🚗 TOY CAR DATASET PREPARATION TOOL 📦")
+    print("\n� EMERGENCY VEHICLE DATASET PREPARATION TOOL 📦")
     print("="*60)
     
     # Step 1: Create directory structure

@@ -1,5 +1,5 @@
 """
-Dataset Collection Tool for Toy Car Detection
+Dataset Collection Tool for Emergency Vehicle Detection
 Captures images from camera to build training dataset
 """
 
@@ -8,13 +8,13 @@ import os
 from datetime import datetime
 import argparse
 
-def collect_toy_car_images(output_dir='datasets/toy_cars/images', angle=None):
+def collect_vehicle_images(output_dir='datasets/emergency_vehicles/images', vehicle_type=None):
     """
-    Capture images of toy cars from different angles
+    Capture images of different vehicle types
     
     Args:
         output_dir: Directory to save captured images
-        angle: Orientation label (front/back/left/right)
+        vehicle_type: Type of vehicle (fire_truck/police_car/ambulance/normal_vehicle)
     """
     
     # Create output directory
@@ -27,29 +27,29 @@ def collect_toy_car_images(output_dir='datasets/toy_cars/images', angle=None):
         print("❌ Error: Could not open camera")
         return
     
-    # Get angle if not provided
-    if angle is None:
-        print("\n🎯 Available angles:")
-        print("  1. front  - Car facing camera (front view)")
-        print("  2. back   - Car facing away (rear view)")
-        print("  3. left   - Left side of car visible")
-        print("  4. right  - Right side of car visible")
-        angle = input("\n📸 Enter angle (front/back/left/right): ").strip().lower()
+    # Get vehicle type if not provided
+    if vehicle_type is None:
+        print("\n🚨 Available vehicle types:")
+        print("  1. fire_truck      - Fire truck / Fire engine")
+        print("  2. police_car      - Police vehicle / Police car")
+        print("  3. ambulance       - Ambulance / Medical emergency vehicle")
+        print("  4. normal_vehicle  - Regular car / Normal vehicle")
+        vehicle_type = input("\n📸 Enter vehicle type: ").strip().lower().replace(' ', '_')
     
-    # Validate angle
-    valid_angles = ['front', 'back', 'left', 'right']
-    if angle not in valid_angles:
-        print(f"❌ Invalid angle. Must be one of: {', '.join(valid_angles)}")
+    # Validate vehicle type
+    valid_types = ['fire_truck', 'police_car', 'ambulance', 'normal_vehicle']
+    if vehicle_type not in valid_types:
+        print(f"❌ Invalid vehicle type. Must be one of: {', '.join(valid_types)}")
         return
     
-    # Create angle-specific subdirectory
-    angle_dir = os.path.join(output_dir, angle)
-    os.makedirs(angle_dir, exist_ok=True)
+    # Create vehicle-type-specific subdirectory
+    vehicle_dir = os.path.join(output_dir, vehicle_type)
+    os.makedirs(vehicle_dir, exist_ok=True)
     
     count = 0
     print(f"\n✅ Camera opened successfully!")
-    print(f"📁 Saving to: {angle_dir}")
-    print(f"🎯 Capturing angle: {angle}")
+    print(f"📁 Saving to: {vehicle_dir}")
+    print(f"🎯 Capturing vehicle type: {vehicle_type}")
     print("\n" + "="*60)
     print("CONTROLS:")
     print("  SPACE - Capture image")
@@ -68,7 +68,7 @@ def collect_toy_car_images(output_dir='datasets/toy_cars/images', angle=None):
         display_frame = frame.copy()
         
         # Add text overlay
-        cv2.putText(display_frame, f"Angle: {angle.upper()}", (10, 30),
+        cv2.putText(display_frame, f"Vehicle: {vehicle_type.upper()}", (10, 30),
                    cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
         cv2.putText(display_frame, f"Images captured: {count}", (10, 70),
                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
@@ -80,14 +80,14 @@ def collect_toy_car_images(output_dir='datasets/toy_cars/images', angle=None):
         cv2.line(display_frame, (w//2 - 30, h//2), (w//2 + 30, h//2), (0, 255, 255), 2)
         cv2.line(display_frame, (w//2, h//2 - 30), (w//2, h//2 + 30), (0, 255, 255), 2)
         
-        cv2.imshow('Toy Car Data Collection', display_frame)
+        cv2.imshow('Emergency Vehicle Data Collection', display_frame)
         
         key = cv2.waitKey(1) & 0xFF
         
         if key == ord(' '):  # Space to capture
             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-            filename = f"{angle}_{count:04d}_{timestamp}.jpg"
-            filepath = os.path.join(angle_dir, filename)
+            filename = f"{vehicle_type}_{count:04d}_{timestamp}.jpg"
+            filepath = os.path.join(vehicle_dir, filename)
             
             # Save original frame (without overlay)
             cv2.imwrite(filepath, frame)
@@ -96,9 +96,9 @@ def collect_toy_car_images(output_dir='datasets/toy_cars/images', angle=None):
             
         elif key == ord('s'):  # Show statistics
             print(f"\n📊 Statistics:")
-            print(f"   Angle: {angle}")
+            print(f"   Vehicle Type: {vehicle_type}")
             print(f"   Images captured: {count}")
-            print(f"   Save directory: {angle_dir}\n")
+            print(f"   Save directory: {vehicle_dir}\n")
             
         elif key == ord('q'):  # Quit
             break
@@ -109,12 +109,12 @@ def collect_toy_car_images(output_dir='datasets/toy_cars/images', angle=None):
     
     print(f"\n✅ Collection complete!")
     print(f"   Total images captured: {count}")
-    print(f"   Saved to: {angle_dir}")
-    print(f"\n💡 Recommendation: Capture at least 50-100 images per angle")
-    print(f"   Current progress: {count}/100 for '{angle}' angle")
+    print(f"   Saved to: {vehicle_dir}")
+    print(f"\n💡 Recommendation: Capture at least 100-200 images per vehicle type")
+    print(f"   Current progress: {count}/200 for '{vehicle_type}'")
 
 
-def show_dataset_summary(dataset_dir='datasets/toy_cars/images'):
+def show_dataset_summary(dataset_dir='datasets/emergency_vehicles/images'):
     """
     Show summary of collected dataset
     """
@@ -126,31 +126,31 @@ def show_dataset_summary(dataset_dir='datasets/toy_cars/images'):
         print(f"❌ Dataset directory not found: {dataset_dir}")
         return
     
-    angles = ['front', 'back', 'left', 'right']
+    vehicle_types = ['fire_truck', 'police_car', 'ambulance', 'normal_vehicle']
     total_images = 0
     
-    for angle in angles:
-        angle_dir = os.path.join(dataset_dir, angle)
-        if os.path.exists(angle_dir):
-            image_files = [f for f in os.listdir(angle_dir) if f.endswith(('.jpg', '.jpeg', '.png'))]
+    for vehicle_type in vehicle_types:
+        vehicle_dir = os.path.join(dataset_dir, vehicle_type)
+        if os.path.exists(vehicle_dir):
+            image_files = [f for f in os.listdir(vehicle_dir) if f.endswith(('.jpg', '.jpeg', '.png'))]
             count = len(image_files)
             total_images += count
-            status = "✅" if count >= 50 else "⚠️"
-            print(f"{status} {angle:8s}: {count:4d} images (Recommended: 50-100)")
+            status = "✅" if count >= 100 else "⚠️"
+            print(f"{status} {vehicle_type:16s}: {count:4d} images (Recommended: 100-200)")
         else:
-            print(f"❌ {angle:8s}:    0 images (Directory not created)")
+            print(f"❌ {vehicle_type:16s}:    0 images (Directory not created)")
     
     print("="*60)
     print(f"Total images: {total_images}")
-    print(f"Ready for training: {'YES ✅' if total_images >= 200 else 'NO ⚠️ (Need at least 200)'}")
+    print(f"Ready for training: {'YES ✅' if total_images >= 400 else 'NO ⚠️ (Need at least 400)'}")
     print("="*60 + "\n")
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Collect toy car images for training')
-    parser.add_argument('--angle', type=str, choices=['front', 'back', 'left', 'right'],
-                       help='Car orientation angle')
-    parser.add_argument('--output', type=str, default='datasets/toy_cars/images',
+    parser = argparse.ArgumentParser(description='Collect emergency vehicle images for training')
+    parser.add_argument('--type', type=str, choices=['fire_truck', 'police_car', 'ambulance', 'normal_vehicle'],
+                       help='Type of vehicle to collect')
+    parser.add_argument('--output', type=str, default='datasets/emergency_vehicles/images',
                        help='Output directory for images')
     parser.add_argument('--summary', action='store_true',
                        help='Show dataset summary instead of collecting')
@@ -160,7 +160,7 @@ if __name__ == "__main__":
     if args.summary:
         show_dataset_summary(args.output)
     else:
-        print("\n🚗 TOY CAR DATASET COLLECTION TOOL 📸")
+        print("\n� EMERGENCY VEHICLE DATASET COLLECTION TOOL 📸")
         print("="*60)
-        collect_toy_car_images(args.output, args.angle)
+        collect_vehicle_images(args.output, args.type)
         print("\n💡 Run with --summary to see collection progress")

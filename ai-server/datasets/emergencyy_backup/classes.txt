@@ -1,0 +1,4 @@
+fire_truck
+police_car
+ambulance
+normal_vehicle

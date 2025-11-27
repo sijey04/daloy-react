@@ -8,8 +8,8 @@ import cv2
 import os
 from pathlib import Path
 
-def test_model(model_path='runs/detect/toy_car_detection/weights/best.pt',
-               test_dir='datasets/toy_cars/images/test',
+def test_model(model_path='runs/detect/emergency_vehicle_detection/weights/best.pt',
+               test_dir='datasets/emergency_vehicles/roboflow_export/test/images',
                conf_threshold=0.3,
                save_dir='test_results'):
     """
@@ -23,7 +23,7 @@ def test_model(model_path='runs/detect/toy_car_detection/weights/best.pt',
     """
     
     print("\n" + "="*80)
-    print("🧪 TESTING CUSTOM TOY CAR MODEL")
+    print("🧪 TESTING CUSTOM EMERGENCY VEHICLE MODEL")
     print("="*80)
     
     # Check if model exists
@@ -62,9 +62,10 @@ def test_model(model_path='runs/detect/toy_car_detection/weights/best.pt',
     print("TESTING RESULTS")
     print("="*80)
     
-    class_names = ['toy_car_front', 'toy_car_back', 'toy_car_left', 'toy_car_right']
+    # Get class names from model
+    class_names = model.names  # This gets the actual class names from the trained model
     total_detections = 0
-    orientation_counts = {'front': 0, 'back': 0, 'left': 0, 'right': 0}
+    vehicle_counts = {name: 0 for name in class_names.values()}
     
     for i, img_path in enumerate(image_files, 1):
         print(f"\n[{i}/{len(image_files)}] Testing: {img_path.name}")
@@ -90,14 +91,14 @@ def test_model(model_path='runs/detect/toy_car_detection/weights/best.pt',
         for box in boxes:
             cls_id = int(box.cls[0])
             confidence = float(box.conf[0])
-            class_name = class_names[cls_id] if cls_id < len(class_names) else f"class_{cls_id}"
-            orientation = class_name.split('_')[-1]
+            class_name = class_names.get(cls_id, f"class_{cls_id}")
+            vehicle_type = class_name.replace('_', ' ').title()
             
-            orientation_counts[orientation] += 1
+            vehicle_counts[class_name] = vehicle_counts.get(class_name, 0) + 1
             total_detections += 1
             
             x1, y1, x2, y2 = box.xyxy[0].tolist()
-            print(f"      • {class_name}: {confidence:.2f} confidence")
+            print(f"      • {vehicle_type}: {confidence:.2f} confidence")
             print(f"        BBox: [{x1:.0f}, {y1:.0f}, {x2:.0f}, {y2:.0f}]")
         
         # Save annotated image
@@ -111,21 +112,23 @@ def test_model(model_path='runs/detect/toy_car_detection/weights/best.pt',
     print(f"Total images tested: {len(image_files)}")
     print(f"Total detections: {total_detections}")
     print(f"Average detections per image: {total_detections/len(image_files):.2f}")
-    print(f"\nOrientation breakdown:")
-    for orientation, count in orientation_counts.items():
-        print(f"  {orientation:8s}: {count:3d} ({count/total_detections*100:.1f}%)" if total_detections > 0 else f"  {orientation:8s}: 0")
+    print(f"\nVehicle type breakdown:")
+    for vehicle_type, count in sorted(vehicle_counts.items(), key=lambda x: x[1], reverse=True):
+        if count > 0:
+            percentage = (count/total_detections*100) if total_detections > 0 else 0
+            print(f"  {vehicle_type:20s}: {count:3d} ({percentage:.1f}%)")
     print(f"\nAnnotated images saved to: {save_dir}")
     print("="*80 + "\n")
 
 
-def test_live_camera(model_path='runs/detect/toy_car_detection/weights/best.pt',
+def test_live_camera(model_path='runs/detect/emergency_vehicle_detection/weights/best.pt',
                     conf_threshold=0.3):
     """
     Test model on live camera feed
     """
     
     print("\n" + "="*80)
-    print("📹 LIVE CAMERA TESTING")
+    print("📹 LIVE CAMERA TESTING - EMERGENCY VEHICLES")
     print("="*80)
     
     # Load model
@@ -182,10 +185,10 @@ if __name__ == "__main__":
     
     parser = argparse.ArgumentParser(description='Test custom toy car model')
     parser.add_argument('--model', type=str, 
-                       default='runs/detect/toy_car_detection/weights/best.pt',
+                       default='runs/detect/emergency_vehicle_detection/weights/best.pt',
                        help='Path to trained model')
     parser.add_argument('--test-dir', type=str,
-                       default='datasets/toy_cars/images/test',
+                       default='datasets/emergency_vehicles/roboflow_export/test/images',
                        help='Directory with test images')
     parser.add_argument('--conf', type=float, default=0.3,
                        help='Confidence threshold')

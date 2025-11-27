@@ -1,0 +1,10 @@
+path: D:\daloy-react\ai-server\datasets\emergency_vehicles
+train: images/train
+val: images/val
+test: images/test
+nc: 4
+names:
+- fire_truck
+- police_car
+- ambulance
+- normal_vehicle

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -47,6 +47,7 @@ import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
 import Header from './Header';
 import Sidebar from './Sidebar';
 import { TrafficLightOverlay } from './shared/TrafficLightOverlay';
+import { AITrafficManagement } from './AITrafficManagement';
 import { aiService, DetectionResponse } from '../services/aiService';
 
 // Add pulse animation keyframes
@@ -246,7 +247,7 @@ interface ArduinoStatus {
 }
 
 // Component to load and display a camera stream dynamically with AI detection support
-const DynamicCameraStream = ({ 
+export const DynamicCameraStream = ({ 
   camera, 
   opacity = 1,
   enableDetection = false,
@@ -3155,6 +3156,220 @@ export const CameraDetail = () => {
   // AI Detection state
   const [detectionEnabled, setDetectionEnabled] = useState(false);
   const [aiServerHealthy, setAiServerHealthy] = useState<boolean | null>(null);
+  
+  // AI Traffic Management state
+  const [directionVehicleCounts, setDirectionVehicleCounts] = useState({
+    east: 0,
+    west: 0,
+    south: 0,
+    north: 0
+  });
+  
+  // Fair Lane Priority System - tracks last green lane to prevent same lane twice
+  const [lanePriorityQueue, setLanePriorityQueue] = useState<Array<'east' | 'west' | 'south' | 'north'>>([
+    'east', 'west', 'south', 'north'
+  ]);
+
+  // Adaptive Traffic Light Control State (Simplified)
+  const [laneActiveTimeLeft, setLaneActiveTimeLeft] = useState<number>(0); // Countdown: time left for current green lane
+  const [laneWaitingTimes, setLaneWaitingTimes] = useState<Record<string, number>>({
+    east: 0,
+    west: 0,
+    south: 0,
+    north: 0
+  }); // Estimated wait time for each non-green lane
+  const [currentGreenLane, setCurrentGreenLane] = useState<'east' | 'west' | 'south' | 'north' | null>(null);
+  const [aiControlEnabled, setAiControlEnabled] = useState(false); // Toggle for AI-driven control
+  const [lastDecisionTime, setLastDecisionTime] = useState<Date | null>(null);
+  const isProcessingDecisionRef = useRef(false); // Use ref instead of state for immediate synchronous check
+
+  // Log AI control state changes
+  useEffect(() => {
+    if (aiControlEnabled) {
+      console.log('🧠 AI ADAPTIVE CONTROL ENABLED');
+      console.log('   ✓ Waiting for vehicle detections...');
+      console.log('   ✓ Will automatically manage green light timing');
+    } else {
+      console.log('⚫ AI Adaptive Control disabled');
+    }
+  }, [aiControlEnabled]);
+  
+  // Simulated Traffic Light State (Frontend-only, no Arduino)
+  const [simulatedTrafficLights, setSimulatedTrafficLights] = useState<TrafficLight[]>([
+    { id: 1, direction: 'East', currentState: 'Red', timeRemaining: 30, cycleTime: { green: 20, yellow: 5, red: 30 } },
+    { id: 2, direction: 'West', currentState: 'Red', timeRemaining: 30, cycleTime: { green: 20, yellow: 5, red: 30 } },
+    { id: 3, direction: 'South', currentState: 'Red', timeRemaining: 30, cycleTime: { green: 20, yellow: 5, red: 30 } },
+    { id: 4, direction: 'North', currentState: 'Red', timeRemaining: 30, cycleTime: { green: 20, yellow: 5, red: 30 } }
+  ]);
+  
+  // Update simulated traffic lights when AI makes a decision
+  useEffect(() => {
+    if (!currentGreenLane || !aiControlEnabled) return;
+    
+    // Map direction to traffic light index
+    const directionToIndex: Record<string, number> = {
+      east: 0,
+      west: 1,
+      south: 2,
+      north: 3
+    };
+    
+    const greenIndex = directionToIndex[currentGreenLane];
+    
+    // Update all traffic lights
+    setSimulatedTrafficLights(prev => prev.map((light, index) => {
+      if (index === greenIndex) {
+        // This lane is green
+        return {
+          ...light,
+          currentState: 'Green',
+          timeRemaining: light.cycleTime.green
+        };
+      } else {
+        // All other lanes are red
+        return {
+          ...light,
+          currentState: 'Red',
+          timeRemaining: light.cycleTime.red
+        };
+      }
+    }));
+  }, [currentGreenLane, aiControlEnabled]);
+  
+  // Countdown timer for simulated traffic lights
+  useEffect(() => {
+    if (!aiControlEnabled) return;
+    
+    const timer = setInterval(() => {
+      setSimulatedTrafficLights(prev => prev.map(light => {
+        const newTimeRemaining = Math.max(0, light.timeRemaining - 1);
+        return {
+          ...light,
+          timeRemaining: newTimeRemaining
+        };
+      }));
+    }, 1000);
+    
+    return () => clearInterval(timer);
+  }, [aiControlEnabled]);
+
+  // Simple AI Adaptive Control: Priority based on most vehicles
+  // Automatically gives green light to lane with most vehicles
+  // Fair rotation: Never prioritizes the same lane twice in a row
+  const handleDirectionDetection = async (direction: 'east' | 'west' | 'south' | 'north', result: DetectionResponse) => {
+    const vehicleCount = result.detections.length;
+    
+    // Update vehicle counts (always update, regardless of decision state)
+    setDirectionVehicleCounts((prev) => ({
+      ...prev,
+      [direction]: vehicleCount
+    }));
+
+    console.log(`📡 Detection: ${direction.toUpperCase()} has ${vehicleCount} vehicles | Green: ${currentGreenLane || 'NONE'} | Processing: ${isProcessingDecisionRef.current}`);
+
+    // Only make AI decisions if adaptive control is enabled, no current green lane, and not already processing
+    if (aiControlEnabled && !currentGreenLane && !isProcessingDecisionRef.current) {
+      console.log('🟢 AI CONTROL READY - Making traffic light decision...');
+      console.log('✅ Making decision...');
+      isProcessingDecisionRef.current = true; // Set ref immediately (synchronous)
+      
+      // Find lane with most vehicles (excluding the last green lane to ensure fair rotation)
+      const counts = {
+        east: direction === 'east' ? vehicleCount : directionVehicleCounts.east,
+        west: direction === 'west' ? vehicleCount : directionVehicleCounts.west,
+        south: direction === 'south' ? vehicleCount : directionVehicleCounts.south,
+        north: direction === 'north' ? vehicleCount : directionVehicleCounts.north
+      };
+
+      // Get lanes sorted by vehicle count (most to least)
+      const sortedLanes = (Object.entries(counts) as Array<[typeof direction, number]>)
+        .filter(([lane]) => lane !== lanePriorityQueue[lanePriorityQueue.length - 1]) // Exclude last green lane
+        .sort(([, a], [, b]) => b - a); // Sort by count descending
+
+      // Pick the lane with most vehicles
+      if (sortedLanes.length > 0 && sortedLanes[0][1] > 0) {
+        const priorityLane = sortedLanes[0][0];
+        const priorityCount = sortedLanes[0][1];
+
+        // Calculate green time based on vehicle count
+        const greenTime = Math.min(15 + (priorityCount * 2), 45); // 15s base + 2s per vehicle, max 45s
+
+        console.log(`🚦 AI Priority: ${priorityLane.toUpperCase()} (${priorityCount} vehicles) → GREEN for ${greenTime}s`);
+
+        // Calculate waiting times for other lanes based on their position in queue
+        const newQueue = [...lanePriorityQueue.filter(lane => lane !== priorityLane), priorityLane];
+        const waitingTimes: Record<string, number> = { east: 0, west: 0, south: 0, north: 0 };
+        
+        let cumulativeTime = greenTime + 5 + 2; // Current green + yellow + red
+        newQueue.forEach((lane) => {
+          if (lane !== priorityLane) {
+            // Estimate time based on position in queue
+            const estimatedGreenTime = Math.min(15 + (counts[lane] * 2), 45);
+            waitingTimes[lane] = cumulativeTime;
+            cumulativeTime += estimatedGreenTime + 5 + 2; // Add this lane's cycle time
+          }
+        });
+
+        // Batch all state updates together to prevent multiple renders
+        // Set green lane, active time, waiting times, and queue ALL AT ONCE
+        setCurrentGreenLane(priorityLane);
+        setLaneActiveTimeLeft(greenTime);
+        setLaneWaitingTimes(waitingTimes);
+        setLanePriorityQueue(newQueue);
+        setLastDecisionTime(new Date());
+
+        // Reset to allow next decision after green + yellow + red clearance
+        setTimeout(() => {
+          setCurrentGreenLane(null);
+          setLaneActiveTimeLeft(0);
+          isProcessingDecisionRef.current = false; // Reset ref
+        }, (greenTime + 5 + 2) * 1000); // green + yellow + red
+      } else {
+        console.log('⚪ No lanes with vehicles detected');
+        isProcessingDecisionRef.current = false; // No lane has vehicles, allow next check
+      }
+    } else if (!aiControlEnabled) {
+      console.log('⏸️  AI Control is OFF - skipping decision');
+    } else if (currentGreenLane) {
+      console.log(`⏳ Lane ${currentGreenLane.toUpperCase()} is currently green - waiting...`);
+    }
+  };
+
+  // Simple countdown timer for active green lane and waiting times
+  useEffect(() => {
+    if (!aiControlEnabled || !currentGreenLane) {
+      setLaneActiveTimeLeft(0);
+      setLaneWaitingTimes({ east: 0, west: 0, south: 0, north: 0 });
+      return;
+    }
+
+    console.log('⏰ Timer started for', currentGreenLane);
+
+    const interval = setInterval(() => {
+      // Countdown active time
+      setLaneActiveTimeLeft(prev => {
+        const newValue = Math.max(0, prev - 1);
+        console.log('⬇️ Active time:', prev, '→', newValue);
+        return newValue;
+      });
+      
+      // Countdown waiting times
+      setLaneWaitingTimes(prev => {
+        const updated = { ...prev };
+        Object.keys(updated).forEach(lane => {
+          if (lane !== currentGreenLane) {
+            updated[lane] = Math.max(0, updated[lane] - 1);
+          }
+        });
+        return updated;
+      });
+    }, 1000);
+
+    return () => {
+      console.log('⏰ Timer cleanup for', currentGreenLane);
+      clearInterval(interval);
+    };
+  }, [currentGreenLane, aiControlEnabled]);
 
   useEffect(() => {
     // Simulate loading data
@@ -3180,6 +3395,23 @@ export const CameraDetail = () => {
     
     return () => clearInterval(interval);
   }, []);
+
+  // Check AI health immediately when detection is enabled
+  useEffect(() => {
+    if (detectionEnabled && aiServerHealthy !== true) {
+      console.log('🔄 Detection enabled but AI server not confirmed healthy, checking now...');
+      const checkAIHealth = async () => {
+        const healthy = await aiService.checkHealth();
+        setAiServerHealthy(healthy);
+        if (healthy) {
+          console.log('✅ AI server is healthy, detection will start now!');
+        } else {
+          console.error('❌ AI server health check failed, detection cannot start');
+        }
+      };
+      checkAIHealth();
+    }
+  }, [detectionEnabled, aiServerHealthy]);
 
   // Handle detection updates from camera
   const handleDetection = (_cameraId: number, result: DetectionResponse) => {
@@ -3396,6 +3628,7 @@ export const CameraDetail = () => {
                 }}
               >
                 <Tab label="📹 Camera Inputs" />
+                <Tab label="🤖 AI Traffic Management" />
                 <Tab label="⚙️ Camera Settings" />
                 <Tab label="🚦 Traffic Lights" />
               </Tabs>
@@ -3405,69 +3638,320 @@ export const CameraDetail = () => {
             <Box sx={{ minHeight: '70vh' }}>
               {/* Tab 0: Camera Inputs */}
               <TabPanel value={mainTabValue} index={0}>
-                {/* Floating Traffic Light Control Button */}
-                <Box
-                  sx={{
-                    position: 'fixed',
-                    bottom: 24,
-                    right: 24,
-                    zIndex: 1000,
-                  }}
-                >
-                  <Button
-                    variant="contained"
-                    size="large"
-                    onClick={() => setTrafficLightOverlayOpen(true)}
-                    startIcon={<TrafficIcon />}
-                    sx={{
-                      backgroundColor: '#67AE6E',
-                      color: 'white',
-                      py: 1.5,
-                      px: 3,
-                      borderRadius: 3,
-                      fontWeight: 600,
-                      fontSize: '1rem',
-                      boxShadow: '0 4px 20px rgba(103, 174, 110, 0.4)',
-                      '&:hover': {
-                        backgroundColor: '#559259',
-                        boxShadow: '0 6px 24px rgba(103, 174, 110, 0.5)',
-                        transform: 'translateY(-2px)',
-                      },
-                      transition: 'all 0.3s ease',
-                    }}
-                  >
-                    Traffic Lights
-                  </Button>
-                </Box>
-
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', mx: -1.5 }}>
-                  {/* Camera Feeds */}
-                  {intersectionData.cameras.map((camera: Camera) => (
-                    <Box key={camera.id} sx={{ width: { xs: '100%', lg: '50%' }, p: 1.5 }}>
-                      <CameraFeed 
-                        camera={camera} 
-                        allCameras={intersectionData.cameras}
-                        trafficLights={intersectionData.trafficLights}
-                        enableDetection={detectionEnabled}
-                        onDetection={(result) => handleDetection(camera.id, result)}
-                      />
+                <Box sx={{ display: 'flex', gap: 2, height: '100%', overflow: 'hidden' }}>
+                  {/* Left Side - Camera Feeds and Traffic Analysis - Scrollable */}
+                  <Box sx={{ 
+                    flex: 1, 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    gap: 2,
+                    overflowY: 'auto',
+                    paddingRight: 1
+                  }}>
+                    {/* Floating Traffic Light Control Button */}
+                    <Box
+                      sx={{
+                        position: 'fixed',
+                        bottom: 24,
+                        right: 24,
+                        zIndex: 1000,
+                      }}
+                    >
+                      <Button
+                        variant="contained"
+                        size="large"
+                        onClick={() => setTrafficLightOverlayOpen(true)}
+                        startIcon={<TrafficIcon />}
+                        sx={{
+                          backgroundColor: '#67AE6E',
+                          color: 'white',
+                          py: 1.5,
+                          px: 3,
+                          borderRadius: 3,
+                          fontWeight: 600,
+                          fontSize: '1rem',
+                          boxShadow: '0 4px 20px rgba(103, 174, 110, 0.4)',
+                          '&:hover': {
+                            backgroundColor: '#559259',
+                            boxShadow: '0 6px 24px rgba(103, 174, 110, 0.5)',
+                            transform: 'translateY(-2px)',
+                          },
+                          transition: 'all 0.3s ease',
+                        }}
+                      >
+                        Traffic Lights
+                      </Button>
                     </Box>
-                  ))}
-                </Box>
-                
-                {/* Traffic Analysis */}
-                <Box sx={{ mt: 3 }}>
-                  <TrafficAnalysisPanel analysis={intersectionData.trafficAnalysis} />
+
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', mx: -1.5 }}>
+                      {/* Camera Feeds */}
+                      {intersectionData.cameras.map((camera: Camera) => (
+                        <Box key={camera.id} sx={{ width: { xs: '100%', lg: '50%' }, p: 1.5 }}>
+                          <CameraFeed 
+                            camera={camera} 
+                            allCameras={intersectionData.cameras}
+                            trafficLights={intersectionData.trafficLights}
+                            enableDetection={detectionEnabled}
+                            onDetection={(result) => handleDetection(camera.id, result)}
+                          />
+                        </Box>
+                      ))}
+                    </Box>
+                    
+                    {/* Traffic Analysis */}
+                    <Box sx={{ mt: 3 }}>
+                      <TrafficAnalysisPanel analysis={intersectionData.trafficAnalysis} />
+                    </Box>
+                  </Box>
+
+                  {/* Right Side - Traffic Light Signals (Sticky) */}
+                  <Box sx={{ 
+                    width: 200,
+                    position: 'sticky',
+                    top: 0,
+                    alignSelf: 'flex-start',
+                    maxHeight: '100vh',
+                    overflowY: 'auto'
+                  }}>
+                    {/* Traffic Light Signals */}
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                      {(() => {
+                        const directions = [
+                          { name: 'East', light: intersectionData.trafficLights[0] },
+                          { name: 'West', light: intersectionData.trafficLights[1] },
+                          { name: 'South', light: intersectionData.trafficLights[2] },
+                          { name: 'North', light: intersectionData.trafficLights[3] }
+                        ];
+
+                        return (
+                          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, mt: 2 }}>
+                            {/* Top Row: East and West */}
+                            <Box sx={{ display: 'flex', flexDirection: 'row', gap: 3, justifyContent: 'center' }}>
+                              {[directions[0], directions[1]].map((dir) => (
+                                <Box key={dir.name} sx={{ textAlign: 'center' }}>
+                                  {/* Direction Label */}
+                                  <Typography variant="body1" sx={{ fontWeight: 700, mb: 2, color: '#1F2937' }}>
+                                    {dir.name}
+                                  </Typography>
+
+                                  {/* Traffic Light Circles - Professional Design */}
+                                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                                    {/* Red Light */}
+                                    <Box
+                                      sx={{
+                                        width: 50,
+                                        height: 50,
+                                        borderRadius: '50%',
+                                        backgroundColor: dir.light?.currentState === 'Red' ? '#DC2626' : '#1F2937',
+                                        border: dir.light?.currentState === 'Red' ? '3px solid #991B1B' : '2px solid #374151',
+                                        boxShadow: dir.light?.currentState === 'Red' 
+                                          ? '0 0 25px rgba(220, 38, 38, 0.9), inset 0 0 15px rgba(255, 255, 255, 0.2)' 
+                                          : 'inset 0 2px 4px rgba(0, 0, 0, 0.3)',
+                                        transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                                        position: 'relative',
+                                        '&::after': dir.light?.currentState === 'Red' ? {
+                                          content: '""',
+                                          position: 'absolute',
+                                          top: '15%',
+                                          left: '25%',
+                                          width: '30%',
+                                          height: '30%',
+                                          borderRadius: '50%',
+                                          backgroundColor: 'rgba(255, 255, 255, 0.4)',
+                                          filter: 'blur(4px)'
+                                        } : {}
+                                      }}
+                                    />
+
+                                    {/* Yellow Light */}
+                                    <Box
+                                      sx={{
+                                        width: 50,
+                                        height: 50,
+                                        borderRadius: '50%',
+                                        backgroundColor: dir.light?.currentState === 'Yellow' ? '#F59E0B' : '#1F2937',
+                                        border: dir.light?.currentState === 'Yellow' ? '3px solid #D97706' : '2px solid #374151',
+                                        boxShadow: dir.light?.currentState === 'Yellow' 
+                                          ? '0 0 25px rgba(245, 158, 11, 0.9), inset 0 0 15px rgba(255, 255, 255, 0.2)' 
+                                          : 'inset 0 2px 4px rgba(0, 0, 0, 0.3)',
+                                        transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                                        position: 'relative',
+                                        '&::after': dir.light?.currentState === 'Yellow' ? {
+                                          content: '""',
+                                          position: 'absolute',
+                                          top: '15%',
+                                          left: '25%',
+                                          width: '30%',
+                                          height: '30%',
+                                          borderRadius: '50%',
+                                          backgroundColor: 'rgba(255, 255, 255, 0.4)',
+                                          filter: 'blur(4px)'
+                                        } : {}
+                                      }}
+                                    />
+
+                                    {/* Green Light */}
+                                    <Box
+                                      sx={{
+                                        width: 50,
+                                        height: 50,
+                                        borderRadius: '50%',
+                                        backgroundColor: dir.light?.currentState === 'Green' ? '#10B981' : '#1F2937',
+                                        border: dir.light?.currentState === 'Green' ? '3px solid #059669' : '2px solid #374151',
+                                        boxShadow: dir.light?.currentState === 'Green' 
+                                          ? '0 0 25px rgba(16, 185, 129, 0.9), inset 0 0 15px rgba(255, 255, 255, 0.2)' 
+                                          : 'inset 0 2px 4px rgba(0, 0, 0, 0.3)',
+                                        transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                                        position: 'relative',
+                                        '&::after': dir.light?.currentState === 'Green' ? {
+                                          content: '""',
+                                          position: 'absolute',
+                                          top: '15%',
+                                          left: '25%',
+                                          width: '30%',
+                                          height: '30%',
+                                          borderRadius: '50%',
+                                          backgroundColor: 'rgba(255, 255, 255, 0.4)',
+                                          filter: 'blur(4px)'
+                                        } : {}
+                                      }}
+                                    />
+                                  </Box>
+                                </Box>
+                              ))}
+                            </Box>
+
+                            {/* Bottom Row: South and North */}
+                            <Box sx={{ display: 'flex', flexDirection: 'row', gap: 3, justifyContent: 'center' }}>
+                              {[directions[2], directions[3]].map((dir) => (
+                                <Box key={dir.name} sx={{ textAlign: 'center' }}>
+                                  {/* Direction Label */}
+                                  <Typography variant="body1" sx={{ fontWeight: 700, mb: 2, color: '#1F2937' }}>
+                                    {dir.name}
+                                  </Typography>
+
+                                  {/* Traffic Light Circles - Professional Design */}
+                                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                                    {/* Red Light */}
+                                    <Box
+                                      sx={{
+                                        width: 50,
+                                        height: 50,
+                                        borderRadius: '50%',
+                                        backgroundColor: dir.light?.currentState === 'Red' ? '#DC2626' : '#1F2937',
+                                        border: dir.light?.currentState === 'Red' ? '3px solid #991B1B' : '2px solid #374151',
+                                        boxShadow: dir.light?.currentState === 'Red' 
+                                          ? '0 0 25px rgba(220, 38, 38, 0.9), inset 0 0 15px rgba(255, 255, 255, 0.2)' 
+                                          : 'inset 0 2px 4px rgba(0, 0, 0, 0.3)',
+                                        transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                                        position: 'relative',
+                                        '&::after': dir.light?.currentState === 'Red' ? {
+                                          content: '""',
+                                          position: 'absolute',
+                                          top: '15%',
+                                          left: '25%',
+                                          width: '30%',
+                                          height: '30%',
+                                          borderRadius: '50%',
+                                          backgroundColor: 'rgba(255, 255, 255, 0.4)',
+                                          filter: 'blur(4px)'
+                                        } : {}
+                                      }}
+                                    />
+
+                                    {/* Yellow Light */}
+                                    <Box
+                                      sx={{
+                                        width: 50,
+                                        height: 50,
+                                        borderRadius: '50%',
+                                        backgroundColor: dir.light?.currentState === 'Yellow' ? '#F59E0B' : '#1F2937',
+                                        border: dir.light?.currentState === 'Yellow' ? '3px solid #D97706' : '2px solid #374151',
+                                        boxShadow: dir.light?.currentState === 'Yellow' 
+                                          ? '0 0 25px rgba(245, 158, 11, 0.9), inset 0 0 15px rgba(255, 255, 255, 0.2)' 
+                                          : 'inset 0 2px 4px rgba(0, 0, 0, 0.3)',
+                                        transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                                        position: 'relative',
+                                        '&::after': dir.light?.currentState === 'Yellow' ? {
+                                          content: '""',
+                                          position: 'absolute',
+                                          top: '15%',
+                                          left: '25%',
+                                          width: '30%',
+                                          height: '30%',
+                                          borderRadius: '50%',
+                                          backgroundColor: 'rgba(255, 255, 255, 0.4)',
+                                          filter: 'blur(4px)'
+                                        } : {}
+                                      }}
+                                    />
+
+                                    {/* Green Light */}
+                                    <Box
+                                      sx={{
+                                        width: 50,
+                                        height: 50,
+                                        borderRadius: '50%',
+                                        backgroundColor: dir.light?.currentState === 'Green' ? '#10B981' : '#1F2937',
+                                        border: dir.light?.currentState === 'Green' ? '3px solid #059669' : '2px solid #374151',
+                                        boxShadow: dir.light?.currentState === 'Green' 
+                                          ? '0 0 25px rgba(16, 185, 129, 0.9), inset 0 0 15px rgba(255, 255, 255, 0.2)' 
+                                          : 'inset 0 2px 4px rgba(0, 0, 0, 0.3)',
+                                        transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                                        position: 'relative',
+                                        '&::after': dir.light?.currentState === 'Green' ? {
+                                          content: '""',
+                                          position: 'absolute',
+                                          top: '15%',
+                                          left: '25%',
+                                          width: '30%',
+                                          height: '30%',
+                                          borderRadius: '50%',
+                                          backgroundColor: 'rgba(255, 255, 255, 0.4)',
+                                          filter: 'blur(4px)'
+                                        } : {}
+                                      }}
+                                    />
+                                  </Box>
+                                </Box>
+                              ))}
+                            </Box>
+                          </Box>
+                        );
+                      })()}
+                    </Box>
+                  </Box>
                 </Box>
               </TabPanel>
               
-              {/* Tab 1: Camera Settings */}
+              {/* Tab 1: AI Traffic Management */}
               <TabPanel value={mainTabValue} index={1}>
+                <Box sx={{ height: 'calc(100vh - 250px)' }}>
+                  <AITrafficManagement
+                    cameras={intersectionData.cameras}
+                    trafficLights={simulatedTrafficLights}
+                    directionVehicleCounts={directionVehicleCounts}
+                    detectionEnabled={detectionEnabled}
+                    aiServerHealthy={aiServerHealthy}
+                    onDirectionDetection={handleDirectionDetection}
+                    lanePriorityQueue={lanePriorityQueue}
+                    aiControlEnabled={aiControlEnabled}
+                    onAiControlToggle={setAiControlEnabled}
+                    currentGreenLane={currentGreenLane}
+                    laneActiveTimeLeft={laneActiveTimeLeft}
+                    laneWaitingTimes={laneWaitingTimes}
+                    lastDecisionTime={lastDecisionTime}
+                  />
+                </Box>
+              </TabPanel>
+              
+              {/* Tab 2: Camera Settings */}
+              <TabPanel value={mainTabValue} index={2}>
                 <CameraSettingsTab cameras={intersectionData.cameras} />
               </TabPanel>
               
-              {/* Tab 2: Traffic Lights */}
-              <TabPanel value={mainTabValue} index={2}>
+              {/* Tab 3: Traffic Lights */}
+              <TabPanel value={mainTabValue} index={3}>
                 <TrafficLightSettingsTab trafficLights={intersectionData.trafficLights} />
               </TabPanel>
             </Box>
